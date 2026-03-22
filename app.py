@@ -218,26 +218,40 @@ def add_student():
     if session.get('role') != 'admin':
         return redirect(url_for('index'))
     
-    name = request.form['name']
-    reg_no = request.form['register_number']
-    year = request.form['year']
-    section = request.form['section']
-    batch = request.form['batch']
+    name = request.form.get('name', '').strip()
+    reg_no = request.form.get('register_number', '').strip()
+    year = request.form.get('year', '')
+    section = request.form.get('section', '')
+    batch = request.form.get('batch', '').strip()
+    
+    # Debug print
+    print(f"Adding student: {name}, {reg_no}, {year}, {section}, {batch}")
+    
+    if not name or not reg_no or not year or not section or not batch:
+        session['upload_message'] = 'All fields are required!'
+        return redirect(url_for('admin_dashboard'))
     
     existing = Student.query.filter_by(register_number=reg_no).first()
     if existing:
+        session['upload_message'] = f'Student {reg_no} already exists!'
         return redirect(url_for('admin_dashboard'))
     
-    student = Student(
-        name=name,
-        register_number=reg_no,
-        year=year,
-        section=section,
-        batch=batch
-    )
-    
-    db.session.add(student)
-    db.session.commit()
+    try:
+        student = Student(
+            name=name,
+            register_number=reg_no,
+            year=year,
+            section=section,
+            batch=batch
+        )
+        db.session.add(student)
+        db.session.commit()
+        session['upload_message'] = f'Student {name} added successfully!'
+        print(f"✅ Student added: {name}")
+    except Exception as e:
+        db.session.rollback()
+        session['upload_message'] = f'Error: {str(e)}'
+        print(f"❌ Error: {e}")
     
     return redirect(url_for('admin_dashboard'))
 
