@@ -75,6 +75,17 @@ class Attendance(db.Model):
 with app.app_context():
     db.create_all()
     print("✅ Database tables created successfully!")
+    
+    # Check if subject column exists
+    try:
+        db.session.execute('SELECT subject FROM attendance LIMIT 1')
+    except:
+        try:
+            db.session.execute('ALTER TABLE attendance ADD COLUMN subject VARCHAR(100)')
+            db.session.commit()
+            print("✅ Added subject column")
+        except:
+            pass
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -325,6 +336,24 @@ def delete_student(student_id):
     
     return redirect(url_for('view_class', year=year, section=section))
 
+@app.route('/delete_staff/<int:staff_id>')
+def delete_staff(staff_id):
+    if session.get('role') != 'admin':
+        return redirect(url_for('index'))
+    
+    staff = Staff.query.get_or_404(staff_id)
+    
+    # Don't allow deleting the main admin
+    if staff.name == 'admin':
+        session['upload_message'] = 'Cannot delete the main admin account!'
+        return redirect(url_for('admin_dashboard'))
+    
+    db.session.delete(staff)
+    db.session.commit()
+    
+    session['upload_message'] = f'Staff member {staff.name} deleted successfully!'
+    return redirect(url_for('admin_dashboard'))
+
 @app.route('/staff_dashboard')
 def staff_dashboard():
     if session.get('role') != 'staff':
@@ -459,7 +488,7 @@ def student_dashboard():
     year = session.get('year')
     section = session.get('section')
     
-    # Get all attendance records for this student
+    # Get all attendance records
     records = Attendance.query.filter_by(student_id=student_id).order_by(
         Attendance.date.desc(), 
         Attendance.period
@@ -474,13 +503,12 @@ def student_dashboard():
         record.marked_by_name = staff.name if staff else 'System'
         daily_attendance[record.date][record.period] = record
     
-    # Calculate statistics based on periods
+    # Calculate statistics
     total_periods = len(records)
     present = sum(1 for r in records if r.status == 'present')
     absent = total_periods - present
     percentage = (present / total_periods * 100) if total_periods > 0 else 0
     
-    # Count unique days
     unique_dates = set([r.date for r in records])
     total_days = len(unique_dates)
     
@@ -504,18 +532,13 @@ def view_class(year, section):
     
     summary = []
     for student in students:
-        # Get all attendance records for this student
         records = Attendance.query.filter_by(student_id=student.id).all()
         
-        # Calculate statistics based on PERIODS (not days)
         total_periods = len(records)
         present_periods = sum(1 for r in records if r.status == 'present')
         absent_periods = total_periods - present_periods
-        
-        # Calculate percentage based on periods
         percentage = (present_periods / total_periods * 100) if total_periods > 0 else 0
         
-        # Count unique days (for information only)
         unique_dates = set([r.date for r in records])
         total_days = len(unique_dates)
         
@@ -543,13 +566,11 @@ def student_attendance_details(student_id, year, section):
     
     student = Student.query.get_or_404(student_id)
     
-    # Get all attendance records
     records = Attendance.query.filter_by(student_id=student_id).order_by(
         Attendance.date.desc(), 
         Attendance.period
     ).all()
     
-    # Group by date and period
     from collections import defaultdict
     daily_attendance = defaultdict(dict)
     
@@ -558,7 +579,6 @@ def student_attendance_details(student_id, year, section):
         record.marked_by_name = staff.name if staff else 'System'
         daily_attendance[record.date][record.period] = record
     
-    # Calculate statistics
     present = 0
     absent = 0
     
