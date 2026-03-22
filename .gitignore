@@ -1,0 +1,37 @@
+# ==========================================
+# PROTECT YOUR PRIVATE DATA!
+# ==========================================
+
+# Your Real Data - NEVER UPLOAD!
+students.xlsx
+staff.xlsx
+attendance.xlsx
+attendance.db
+*.db
+*.sqlite
+
+# Database Folder
+instance/
+data/
+
+# Virtual Environment
+env/
+venv/
+__pycache__/
+*.pyc
+
+# Uploads
+uploads/
+static/uploads/
+
+# Environment Variables
+.env
+.env.local
+
+# IDE Files
+.vscode/
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db

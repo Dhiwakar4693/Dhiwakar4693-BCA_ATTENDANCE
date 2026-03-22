@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Unsaved Changes - Warning</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
+        .container { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 450px; width: 100%; padding: 24px; text-align: center; }
+        .warning-icon { font-size: 60px; margin-bottom: 16px; }
+        h2 { color: #333; margin-bottom: 16px; font-size: 1.5em; }
+        .message { background: #fff3cd; color: #856404; padding: 16px; border-radius: 10px; margin: 16px 0; text-align: left; font-size: 0.85em; border-left: 4px solid #ffc107; }
+        .btn-container { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 16px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85em; font-weight: 600; text-decoration: none; display: inline-block; transition: all 0.2s; }
+        .btn-save { background: #28a745; color: white; }
+        .btn-back { background: #007bff; color: white; }
+        .btn-discard { background: #dc3545; color: white; }
+        .btn:hover { transform: translateY(-2px); }
+        @media (max-width: 480px) {
+            .container { padding: 16px; }
+            h2 { font-size: 1.2em; }
+            .btn { padding: 8px 16px; font-size: 0.75em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="warning-icon">⚠️</div>
+        <h2>Unsaved Changes!</h2>
+        <div class="message"><p><strong>You have made changes to attendance marks!</strong></p><p>If you logout now, your recent changes will be lost.</p></div>
+        <div class="btn-container">
+            <a href="{{ url_for('staff_dashboard') }}" class="btn btn-back">↩ Continue Marking</a>
+            <a href="{{ url_for('save_attendance') }}" class="btn btn-save">💾 Save & Logout</a>
+            <a href="{{ url_for('clear_temp_attendance') }}" class="btn btn-discard">🗑️ Discard & Logout</a>
+        </div>
+    </div>
+</body>
+</html>

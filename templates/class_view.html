@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>{{ year }} - Section {{ section }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 16px; }
+        .container { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f0f0f0; flex-wrap: wrap; gap: 12px; }
+        .header h1 { color: #333; font-size: 1.4em; }
+        .class-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px; border-radius: 12px; margin-bottom: 16px; }
+        .stats-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+        .stat-card { background: #f8f9fa; padding: 12px; border-radius: 10px; text-align: center; }
+        .stat-card h3 { font-size: 1.5em; color: #667eea; }
+        .info-note { background: #e8f4f8; padding: 10px; border-radius: 8px; margin-bottom: 16px; text-align: center; font-size: 0.7em; }
+        .table-wrapper { overflow-x: auto; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; background: white; min-width: 800px; }
+        th { background: #667eea; color: white; padding: 10px 6px; text-align: center; font-size: 0.7em; }
+        td { padding: 8px 4px; text-align: center; border-bottom: 1px solid #f0f0f0; font-size: 0.7em; }
+        .student-name { text-align: left; }
+        .present { color: #28a745; font-weight: bold; }
+        .absent { color: #dc3545; }
+        .high { color: #28a745; font-weight: bold; }
+        .medium { color: #ffc107; font-weight: bold; }
+        .low { color: #dc3545; font-weight: bold; }
+        .btn { padding: 4px 8px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.65em; text-decoration: none; display: inline-block; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .print-btn { background: #28a745; color: white; padding: 4px 10px; border-radius: 5px; font-size: 0.7em; text-decoration: none; margin-right: 8px; display: inline-block; }
+        .details-btn { background: #17a2b8; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 0.65em; display: inline-block; }
+        @media (min-width: 768px) {
+            .container { padding: 30px; }
+            .header h1 { font-size: 2em; }
+            .stats-container { grid-template-columns: repeat(4, 1fr); gap: 20px; }
+            .stat-card h3 { font-size: 2em; }
+            th { padding: 12px; font-size: 0.9em; }
+            td { padding: 10px; font-size: 0.85em; }
+            .btn, .details-btn { padding: 5px 10px; font-size: 0.75em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📚 BCA {{ year }} - Section {{ section }}</h1>
+            <div><a href="{{ url_for('print_attendance', year=year, section=section) }}" class="print-btn">🖨️ Print</a><a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">← Back</a></div>
+        </div>
+        <div class="class-header"><h2>Class Details</h2><p>Year: <strong>{{ year }}</strong> | Section: <strong>{{ section }}</strong> | Total Students: <strong>{{ students|length }}</strong></p></div>
+        <div class="stats-container">
+            <div class="stat-card"><h3>{{ students|length }}</h3><p>Total Students</p></div>
+            <div class="stat-card"><h3>{{ students|selectattr('percentage', 'defined')|selectattr('percentage', '>=', 75)|list|length }}</h3><p>Above 75%</p></div>
+            <div class="stat-card"><h3>{{ students|selectattr('percentage', 'defined')|selectattr('percentage', '<', 40)|list|length }}</h3><p>Below 40% (Risk)</p></div>
+            <div class="stat-card"><h3>{{ "%.1f"|format(students|map(attribute='percentage')|sum / students|length if students|length > 0 else 0) }}%</h3><p>Class Average</p></div>
+        </div>
+        <div class="info-note">📊 Percentage = (Present Periods ÷ Total Periods) × 100</div>
+        <div class="table-wrapper">
+            <table><thead><tr><th>S.No</th><th>Register No</th><th>Student Name</th><th>Batch</th><th>Total Days</th><th>Total Periods</th><th>Present</th><th>Absent</th><th>Percentage</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+            {% for student in students %}<tr><td>{{ loop.index }}</td><td>{{ student.reg_no }}</td><td class="student-name">{{ student.name }}</td><td>{{ student.batch }}</td><td>{{ student.total_days }}</td><td>{{ student.total_periods }}</td><td class="present">{{ student.present_periods }}</td><td class="absent">{{ student.absent_periods }}</td><td class="{% if student.percentage >= 75 %}high{% elif student.percentage >= 40 %}medium{% else %}low{% endif %}"><strong>{{ student.percentage }}%</strong></td><td>{% if student.percentage >= 75 %}✅ Good{% elif student.percentage >= 40 %}⚠️ Average{% else %}❌ Low{% endif %}</td><td><a href="{{ url_for('student_attendance_details', student_id=student.id, year=year, section=section) }}" class="details-btn">📋 Details</a> <a href="{{ url_for('delete_student', student_id=student.id) }}" class="btn btn-danger" onclick="return confirm('⚠️ Delete {{ student.name }}?')">🗑️ Delete</a></td></tr>{% endfor %}
+            </tbody></table>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Staff Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 16px; }
+        .container { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f0f0f0; flex-wrap: wrap; gap: 12px; }
+        .header h2 { color: #333; font-size: 1.3em; }
+        .class-info { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px; border-radius: 12px; margin-bottom: 16px; }
+        .period-info { background: #e8f4f8; color: #0066cc; padding: 12px; border-radius: 10px; margin-bottom: 16px; text-align: center; font-weight: bold; font-size: 0.9em; }
+        .date-info { background: #f8f9fa; padding: 12px; border-radius: 10px; margin-bottom: 16px; text-align: center; font-weight: bold; }
+        .unsaved-indicator { position: fixed; top: 16px; right: 16px; background: #ffc107; color: #856404; padding: 6px 12px; border-radius: 50px; font-weight: 600; font-size: 0.7em; display: none; z-index: 1000; }
+        .stats-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+        .stat-box { background: #f8f9fa; padding: 12px; border-radius: 10px; text-align: center; }
+        .stat-box .number { font-size: 1.5em; font-weight: bold; color: #667eea; }
+        .table-wrapper { overflow-x: auto; margin-top: 16px; }
+        table { width: 100%; border-collapse: collapse; background: white; min-width: 600px; }
+        th { background: #667eea; color: white; padding: 10px; text-align: center; font-size: 0.75em; }
+        td { padding: 8px; text-align: center; border-bottom: 1px solid #ddd; font-size: 0.75em; }
+        .student-name { text-align: left; }
+        .attendance-options { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+        .attendance-btn { padding: 5px 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 0.7em; min-width: 55px; }
+        .present-active { background: #28a745; color: white; }
+        .present-inactive { background: #e9ecef; color: #666; }
+        .absent-active { background: #dc3545; color: white; }
+        .absent-inactive { background: #e9ecef; color: #666; }
+        .button-group { display: flex; gap: 12px; margin-top: 20px; flex-direction: column; }
+        .btn { padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.85em; font-weight: 600; text-align: center; flex: 1; }
+        .btn-save { background: #28a745; color: white; }
+        .btn-exit { background: #6c757d; color: white; }
+        .btn-secondary { background: #6c757d; color: white; padding: 6px 12px; text-decoration: none; border-radius: 8px; font-size: 0.8em; }
+        @media (min-width: 768px) {
+            .container { padding: 30px; }
+            .header h2 { font-size: 1.8em; }
+            .stats-summary .number { font-size: 2em; }
+            .button-group { flex-direction: row; }
+            .attendance-btn { padding: 6px 15px; min-width: 70px; font-size: 0.8em; }
+        }
+    </style>
+</head>
+<body>
+    <input type="hidden" id="hasUnsavedChangesData" value="{{ has_unsaved_changes|tojson }}">
+    <input type="hidden" id="periodValue" value="{{ period }}">
+    <div class="unsaved-indicator" id="unsavedIndicator">⚠️ Unsaved Changes</div>
+    <div class="container">
+        <div class="header"><h2>👨‍🏫 {{ staff_name }}</h2><a href="{{ url_for('logout') }}" class="btn btn-secondary" id="logoutBtn">Logout</a></div>
+        <div class="class-info"><h3>{{ year }} - Section {{ section }}</h3><p>Subject: <strong>{{ subject }}</strong> | Total: <strong>{{ students|length }}</strong></p></div>
+        <div class="period-info">🕐 Marking Attendance for <strong>Period {{ period }}</strong>{% if period == 1 or period == 4 %} (3 pts - Key Period){% else %} (0.75 pts){% endif %}</div>
+        <div class="date-info">📅 {{ today }}</div>
+        <div class="stats-summary"><div class="stat-box"><div class="number">{{ students|length }}</div><div class="label">Total</div></div><div class="stat-box"><div class="number" id="presentCount">0</div><div class="label">Present</div></div><div class="stat-box"><div class="number" id="absentCount">0</div><div class="label">Absent</div></div></div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>S.No</th>
+                        <th>Reg No</th>
+                        <th>Student Name</th>
+                        <th>Attendance</th>
+                    </thead>
+                <tbody>
+                    {% for student in students %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ student.register_number }}</td>
+                        <td class="student-name">{{ student.name }}</td>
+                        <td>
+                            {% set status = attendance_dict.get(student.id, {}).get(period) %}
+                            <div class="attendance-options">
+                                <button class="attendance-btn {% if status == 'present' %}present-active{% else %}present-inactive{% endif %}" data-regno="{{ student.register_number }}" data-status="present" onclick="markAttendance(this, '{{ student.register_number }}', 'present')">✅ Present</button>
+                                <button class="attendance-btn {% if status == 'absent' %}absent-active{% else %}absent-inactive{% endif %}" data-regno="{{ student.register_number }}" data-status="absent" onclick="markAttendance(this, '{{ student.register_number }}', 'absent')">❌ Absent</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="button-group"><button onclick="saveAttendance()" class="btn btn-save">💾 Save & Exit</button><button onclick="discardAttendance()" class="btn btn-exit">🗑️ Discard & Exit</button></div>
+    </div>
+    <script>
+        let hasUnsavedChanges = document.getElementById('hasUnsavedChangesData').value === 'true';
+        let currentPeriod = parseInt(document.getElementById('periodValue').value);
+        const unsavedIndicator = document.getElementById('unsavedIndicator');
+        function updateUnsavedIndicator() { if (hasUnsavedChanges) unsavedIndicator.style.display = 'block'; else unsavedIndicator.style.display = 'none'; }
+        function updateStatistics() { let present = 0, absent = 0; document.querySelectorAll('tbody tr').forEach(row => { if (row.querySelector('.present-active')) present++; else absent++; }); document.getElementById('presentCount').textContent = present; document.getElementById('absentCount').textContent = absent; }
+        function markAttendance(btn, regNo, status) { let row = btn.closest('tr'), presentBtn = row.querySelector('.attendance-btn[data-status="present"]'), absentBtn = row.querySelector('.attendance-btn[data-status="absent"]'); if (status === 'present') { presentBtn.classList.remove('present-inactive'); presentBtn.classList.add('present-active'); absentBtn.classList.remove('absent-active'); absentBtn.classList.add('absent-inactive'); } else { absentBtn.classList.remove('absent-inactive'); absentBtn.classList.add('absent-active'); presentBtn.classList.remove('present-active'); presentBtn.classList.add('present-inactive'); } fetch('/update_temp_attendance', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reg_no: regNo, period: currentPeriod, status: status }) }).then(r => r.json()).then(d => { if (d.success) { hasUnsavedChanges = true; updateUnsavedIndicator(); updateStatistics(); } }); }
+        function saveAttendance() { if (confirm('✅ Save all attendance marks?')) { window.removeEventListener('beforeunload', beforeUnloadHandler); hasUnsavedChanges = false; window.location.href = "{{ url_for('save_attendance') }}"; } }
+        function discardAttendance() { if (confirm('⚠️ Discard all changes?')) { window.removeEventListener('beforeunload', beforeUnloadHandler); hasUnsavedChanges = false; window.location.href = "{{ url_for('clear_temp_attendance') }}"; } }
+        function beforeUnloadHandler(e) { if (hasUnsavedChanges) { e.preventDefault(); e.returnValue = 'You have unsaved changes!'; return e.returnValue; } }
+        document.getElementById('logoutBtn')?.addEventListener('click', e => { if (hasUnsavedChanges) { e.preventDefault(); window.location.href = "{{ url_for('logout') }}"; } });
+        window.addEventListener('beforeunload', beforeUnloadHandler);
+        updateUnsavedIndicator(); updateStatistics();
+    </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Error - Attendance System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 16px; }
+        .container { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 450px; width: 100%; padding: 30px; text-align: center; }
+        .error-icon { font-size: 70px; margin-bottom: 16px; }
+        h1 { color: #333; margin-bottom: 16px; font-size: 1.5em; }
+        .error-message { background: #f8d7da; color: #721c24; padding: 16px; border-radius: 10px; margin: 16px 0; border-left: 4px solid #dc3545; font-size: 0.85em; }
+        .btn { display: inline-block; padding: 10px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.2s; }
+        .btn:hover { background: #5a67d8; transform: translateY(-2px); }
+        @media (max-width: 480px) {
+            .container { padding: 20px; }
+            .error-icon { font-size: 50px; }
+            h1 { font-size: 1.2em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-icon">⚠️</div>
+        <h1>Oops! Something went wrong</h1>
+        <div class="error-message">{{ message }}</div>
+        <a href="{{ url_for('index') }}" class="btn">← Go to Home</a>
+    </div>
+</body>
+</html>
