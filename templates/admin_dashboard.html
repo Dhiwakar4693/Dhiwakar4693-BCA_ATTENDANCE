@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>BCA Department - Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 16px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #f0f0f0;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 1.5em;
+        }
+
+        .header h1 span {
+            color: #667eea;
+            font-size: 0.6em;
+            display: block;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            text-align: center;
+            font-size: 0.85em;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 1.6em;
+            margin-bottom: 4px;
+        }
+
+        .stat-card p {
+            font-size: 0.8em;
+            opacity: 0.9;
+        }
+
+        .year-cards {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .year-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .year-card h3 {
+            color: #333;
+            margin-bottom: 12px;
+            text-align: center;
+            font-size: 1.2em;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .sections {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .section-box {
+            background: white;
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .section-box h4 {
+            color: #667eea;
+            margin-bottom: 6px;
+            font-size: 0.9em;
+        }
+
+        .section-box .count {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .view-btn, .print-btn {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.7em;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+
+        .view-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .print-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .upload-section h3 {
+            margin-bottom: 12px;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .upload-section p {
+            font-size: 0.8em;
+            margin-bottom: 12px;
+        }
+
+        .upload-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .upload-form .form-group {
+            width: 100%;
+        }
+
+        .upload-form .form-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.8em;
+            color: #555;
+        }
+
+        .upload-form input, .upload-form select {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.85em;
+        }
+
+        .admin-sections {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+            margin: 24px 0;
+        }
+
+        .add-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .add-section h3 {
+            color: #333;
+            margin-bottom: 16px;
+            font-size: 1.1em;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 4px;
+            color: #555;
+            font-weight: 500;
+            font-size: 0.8em;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.85em;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85em;
+            transition: all 0.3s;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            padding: 8px 16px;
+            font-size: 0.8em;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 0.7em;
+            transition: background 0.3s;
+            display: inline-block;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .staff-table-container {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 12px;
+            margin-top: 24px;
+            overflow-x: auto;
+        }
+
+        .staff-table-container h3 {
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            min-width: 400px;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-size: 0.8em;
+        }
+
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.8em;
+        }
+
+        @media (min-width: 768px) {
+            body { padding: 20px; }
+            .container { padding: 30px; }
+            .header h1 { font-size: 2em; }
+            .stats-container { grid-template-columns: repeat(4, 1fr); gap: 20px; }
+            .stat-card h3 { font-size: 2.2em; }
+            .year-cards { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+            .year-card h3 { font-size: 1.3em; }
+            .section-box .count { font-size: 1.5em; }
+            .upload-form { flex-direction: row; align-items: flex-end; gap: 15px; }
+            .upload-form .form-group { flex: 1; }
+            .admin-sections { grid-template-columns: repeat(2, 1fr); gap: 30px; }
+            .add-section { padding: 25px; }
+            .staff-table-container { padding: 20px; }
+        }
+
+        @media (max-width: 480px) {
+            .sections { grid-template-columns: 1fr; gap: 8px; }
+            .section-box { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; }
+            .section-box h4 { margin-bottom: 0; }
+            .section-box .count { font-size: 1.1em; }
+            .btn-group { margin-top: 0; }
+            .stats-container { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+            .stat-card { padding: 12px; }
+            .stat-card h3 { font-size: 1.3em; }
+            th, td { padding: 6px; font-size: 0.7em; }
+            .btn-danger { padding: 3px 8px; font-size: 0.65em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🎓 BCA Department <span>Admin Dashboard</span></h1>
+            </div>
+            <a href="{{ url_for('logout') }}" class="btn btn-secondary">Logout</a>
+        </div>
+
+        {% if session.upload_message %}
+        <div class="alert alert-success">
+            {{ session.upload_message }}
+            {% set _ = session.pop('upload_message', None) %}
+        </div>
+        {% endif %}
+
+        <div class="stats-container">
+            <div class="stat-card"><h3>{{ total_students }}</h3><p>Total Students</p></div>
+            <div class="stat-card"><h3>{{ total_staff }}</h3><p>Total Staff</p></div>
+            <div class="stat-card"><h3>9</h3><p>Total Sections</p></div>
+            <div class="stat-card"><h3>3</h3><p>Total Years</p></div>
+        </div>
+
+        <div class="upload-section">
+            <h3>📊 Bulk Upload Students (Excel/CSV)</h3>
+            <p>Upload file with columns: <strong>name, register_number, batch</strong></p>
+            <div class="upload-form">
+                <form action="{{ url_for('upload_students') }}" method="POST" enctype="multipart/form-data" style="width: 100%; display: flex; flex-wrap: wrap; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Year:</label>
+                        <select name="year" required>
+                            <option value="1st Year">1st Year</option>
+                            <option value="2nd Year">2nd Year</option>
+                            <option value="3rd Year">3rd Year</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Section:</label>
+                        <select name="section" required>
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Excel/CSV File:</label>
+                        <input type="file" name="file" accept=".xlsx,.xls,.csv" required>
+                    </div>
+                    <div class="form-group" style="flex: 0;">
+                        <button type="submit" class="btn btn-primary" style="margin-top: 22px;">📤 Upload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="year-cards">
+            {% for year in ['1st Year', '2nd Year', '3rd Year'] %}
+            <div class="year-card">
+                <h3>{{ '📚' if year == '1st Year' else '💻' if year == '2nd Year' else '🚀' }} {{ year }} BCA</h3>
+                <div class="sections">
+                    {% for section in ['A', 'B', 'C'] %}
+                    {% set count = students|selectattr('year', 'equalto', year)|selectattr('section', 'equalto', section)|list|length %}
+                    <div class="section-box">
+                        <h4>Section {{ section }}</h4>
+                        <div class="count">{{ count }}</div>
+                        <div class="btn-group">
+                            <a href="{{ url_for('view_class', year=year, section=section) }}" class="view-btn">📋 View</a>
+                            <a href="{{ url_for('print_attendance', year=year, section=section) }}" class="print-btn">🖨️ Print</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="admin-sections">
+            <div class="add-section">
+                <h3>➕ Add Single Student</h3>
+                <form action="{{ url_for('add_student') }}" method="POST">
+                    <div class="form-group"><label>Student Name:</label><input type="text" name="name" required></div>
+                    <div class="form-group"><label>Register Number:</label><input type="text" name="register_number" required></div>
+                    <div class="form-group"><label>Year:</label><select name="year"><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option></select></div>
+                    <div class="form-group"><label>Section:</label><select name="section"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
+                    <div class="form-group"><label>Batch:</label><input type="text" name="batch" required></div>
+                    <button type="submit" class="btn btn-success">Add Student</button>
+                </form>
+            </div>
+
+            <div class="add-section">
+                <h3>👤 Add New Staff</h3>
+                <form action="{{ url_for('add_staff') }}" method="POST">
+                    <div class="form-group"><label>Staff Name:</label><input type="text" name="name" required></div>
+                    <div class="form-group"><label>Password:</label><input type="text" name="password" required></div>
+                    <div class="form-group"><label>Subject:</label><input type="text" name="subject" required></div>
+                    <button type="submit" class="btn btn-success">Add Staff</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="staff-table-container">
+            <h3>👥 All Staff</h3>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Subject</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for member in staff %}
+                        <tr>
+                            <td>{{ member.name }}</td>
+                            <td>{{ member.subject }}</td>
+                            <td>
+                                <a href="{{ url_for('delete_staff', staff_id=member.id) }}" 
+                                   class="btn btn-danger" 
+                                   onclick="return confirm('⚠️ Delete staff member {{ member.name }}?\n\nThis action cannot be undone!')">
+                                    🗑️ Delete
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
