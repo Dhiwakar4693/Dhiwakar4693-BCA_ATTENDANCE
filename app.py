@@ -218,26 +218,35 @@ def add_student():
     if session.get('role') != 'admin':
         return redirect(url_for('index'))
     
-    name = request.form['name']
-    reg_no = request.form['register_number']
-    year = request.form['year']
-    section = request.form['section']
-    batch = request.form['batch']
+    name = request.form.get('name', '').strip()
+    reg_no = request.form.get('register_number', '').strip()
+    year = request.form.get('year', '')
+    section = request.form.get('section', '')
+    batch = request.form.get('batch', '').strip()
+    
+    if not name or not reg_no or not year or not section or not batch:
+        session['upload_message'] = 'All fields are required!'
+        return redirect(url_for('admin_dashboard'))
     
     existing = Student.query.filter_by(register_number=reg_no).first()
     if existing:
+        session['upload_message'] = f'Student {reg_no} already exists!'
         return redirect(url_for('admin_dashboard'))
     
-    student = Student(
-        name=name,
-        register_number=reg_no,
-        year=year,
-        section=section,
-        batch=batch
-    )
-    
-    db.session.add(student)
-    db.session.commit()
+    try:
+        student = Student(
+            name=name,
+            register_number=reg_no,
+            year=year,
+            section=section,
+            batch=batch
+        )
+        db.session.add(student)
+        db.session.commit()
+        session['upload_message'] = f'✅ Student {name} added successfully!'
+    except Exception as e:
+        db.session.rollback()
+        session['upload_message'] = f'❌ Error: {str(e)}'
     
     return redirect(url_for('admin_dashboard'))
 
@@ -246,18 +255,23 @@ def add_staff():
     if session.get('role') != 'admin':
         return redirect(url_for('index'))
     
-    name = request.form['name']
-    password = request.form['password']
-    subject = request.form['subject']
+    name = request.form.get('name', '').strip()
+    password = request.form.get('password', '').strip()
+    subject = request.form.get('subject', '').strip()
     
-    staff = Staff(
-        name=name,
-        subject=subject
-    )
-    staff.set_password(password)
+    if not name or not password or not subject:
+        session['upload_message'] = 'All fields are required!'
+        return redirect(url_for('admin_dashboard'))
     
-    db.session.add(staff)
-    db.session.commit()
+    try:
+        staff = Staff(name=name, subject=subject)
+        staff.set_password(password)
+        db.session.add(staff)
+        db.session.commit()
+        session['upload_message'] = f'✅ Staff {name} added successfully!'
+    except Exception as e:
+        db.session.rollback()
+        session['upload_message'] = f'❌ Error: {str(e)}'
     
     return redirect(url_for('admin_dashboard'))
 
@@ -314,10 +328,10 @@ def upload_students():
                     skipped_count += 1
             
             db.session.commit()
-            session['upload_message'] = f'Added {added_count} students. Skipped {skipped_count} duplicates.'
+            session['upload_message'] = f'✅ Added {added_count} students. Skipped {skipped_count} duplicates.'
             
         except Exception as e:
-            session['upload_message'] = f'Error: {str(e)}'
+            session['upload_message'] = f'❌ Error: {str(e)}'
     
     return redirect(url_for('admin_dashboard'))
 
@@ -343,7 +357,6 @@ def delete_staff(staff_id):
     
     staff = Staff.query.get_or_404(staff_id)
     
-    # Don't allow deleting the main admin
     if staff.name == 'admin':
         session['upload_message'] = 'Cannot delete the main admin account!'
         return redirect(url_for('admin_dashboard'))
@@ -351,7 +364,7 @@ def delete_staff(staff_id):
     db.session.delete(staff)
     db.session.commit()
     
-    session['upload_message'] = f'Staff member {staff.name} deleted successfully!'
+    session['upload_message'] = f'✅ Staff member {staff.name} deleted successfully!'
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/staff_dashboard')
@@ -367,6 +380,8 @@ def staff_dashboard():
     students = Student.query.filter_by(year=year, section=section).all()
     
     today = datetime.now().date()
+    
+    # Get existing attendance from database
     existing_attendance = Attendance.query.filter(
         Attendance.date == today,
         Attendance.period == period,
@@ -379,8 +394,10 @@ def staff_dashboard():
             existing_dict[record.student_id] = {}
         existing_dict[record.student_id][record.period] = record.status
     
+    # Get temporary attendance from session
     temp_attendance = session.get('temp_attendance', {})
     
+    # Merge: temp overrides existing
     attendance_dict = {}
     for student in students:
         attendance_dict[student.id] = {}
@@ -488,13 +505,11 @@ def student_dashboard():
     year = session.get('year')
     section = session.get('section')
     
-    # Get all attendance records
     records = Attendance.query.filter_by(student_id=student_id).order_by(
         Attendance.date.desc(), 
         Attendance.period
     ).all()
     
-    # Group by date and period for horizontal display
     from collections import defaultdict
     daily_attendance = defaultdict(dict)
     
@@ -503,7 +518,6 @@ def student_dashboard():
         record.marked_by_name = staff.name if staff else 'System'
         daily_attendance[record.date][record.period] = record
     
-    # Calculate statistics
     total_periods = len(records)
     present = sum(1 for r in records if r.status == 'present')
     absent = total_periods - present
@@ -566,18 +580,37 @@ def student_attendance_details(student_id, year, section):
     
     student = Student.query.get_or_404(student_id)
     
+    # Get database records
     records = Attendance.query.filter_by(student_id=student_id).order_by(
         Attendance.date.desc(), 
         Attendance.period
     ).all()
     
+    # Get temporary attendance from session (for today's pending marks)
+    temp_attendance = session.get('temp_attendance', {})
+    today = datetime.now().date()
+    
     from collections import defaultdict
     daily_attendance = defaultdict(dict)
     
+    # First, add database records
     for record in records:
         staff = Staff.query.get(record.marked_by)
         record.marked_by_name = staff.name if staff else 'System'
         daily_attendance[record.date][record.period] = record
+    
+    # Then, override with temporary attendance for today
+    if str(student_id) in temp_attendance:
+        for period_str, status in temp_attendance[str(student_id)].items():
+            period = int(period_str)
+            # Create a virtual record for temp attendance
+            virtual_record = type('obj', (object,), {
+                'status': status,
+                'marked_by_name': 'Pending Save',
+                'date': today,
+                'period': period
+            })
+            daily_attendance[today][period] = virtual_record
     
     present = 0
     absent = 0
@@ -631,6 +664,92 @@ def print_attendance(year, section):
                          section=section,
                          students=summary,
                          print_date=datetime.now().strftime('%d-%m-%Y %H:%M'))
+
+@app.route('/change_password', methods=['GET', 'POST'])
+def change_password():
+    if session.get('role') != 'admin':
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        current_password = request.form['current_password']
+        new_password = request.form['new_password']
+        confirm_password = request.form['confirm_password']
+        
+        admin = Staff.query.filter_by(name='admin').first()
+        
+        if not admin.check_password(current_password):
+            session['password_message'] = '❌ Current password is incorrect!'
+            return redirect(url_for('change_password'))
+        
+        if new_password != confirm_password:
+            session['password_message'] = '❌ New passwords do not match!'
+            return redirect(url_for('change_password'))
+        
+        if len(new_password) < 6:
+            session['password_message'] = '❌ Password must be at least 6 characters!'
+            return redirect(url_for('change_password'))
+        
+        admin.set_password(new_password)
+        db.session.commit()
+        
+        session['password_message'] = '✅ Password changed successfully! Please login again.'
+        session.clear()
+        return redirect(url_for('index'))
+    
+    return render_template('change_password.html')
+
+@app.route('/add_previous_attendance/<int:student_id>', methods=['GET', 'POST'])
+def add_previous_attendance(student_id):
+    if session.get('role') != 'admin':
+        return redirect(url_for('index'))
+    
+    student = Student.query.get_or_404(student_id)
+    staff = Staff.query.all()
+    
+    if request.method == 'POST':
+        date_str = request.form['date']
+        period = int(request.form['period'])
+        status = request.form['status']
+        subject = request.form['subject']
+        marked_by = int(request.form['marked_by'])
+        
+        try:
+            date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            
+            existing = Attendance.query.filter_by(
+                student_id=student.id,
+                date=date,
+                period=period
+            ).first()
+            
+            if existing:
+                existing.status = status
+                existing.subject = subject
+                existing.marked_by = marked_by
+                existing.marked_at = datetime.now()
+                session['upload_message'] = f'✅ Attendance updated for {student.name} on {date_str} Period {period}'
+            else:
+                attendance = Attendance(
+                    student_id=student.id,
+                    date=date,
+                    period=period,
+                    status=status,
+                    subject=subject,
+                    marked_by=marked_by
+                )
+                db.session.add(attendance)
+                session['upload_message'] = f'✅ Previous attendance added for {student.name} on {date_str} Period {period}'
+            
+            db.session.commit()
+            return redirect(url_for('view_class', year=student.year, section=student.section))
+            
+        except Exception as e:
+            session['upload_message'] = f'❌ Error: {str(e)}'
+            return redirect(url_for('add_previous_attendance', student_id=student.id))
+    
+    return render_template('add_previous_attendance.html', 
+                         student=student, 
+                         staff=staff)
 
 @app.route('/logout')
 def logout():
