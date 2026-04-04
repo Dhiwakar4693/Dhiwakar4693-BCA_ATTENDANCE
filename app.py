@@ -2296,6 +2296,107 @@ def change_password():
     
     return render_template('change_password.html')
 
+@app.route('/get_student_full_details/<int:student_id>')
+def get_student_full_details(student_id):
+    role = session.get('role')
+    if role not in ['staff', 'dept_admin', 'dept_admin_viewer']:
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    
+    student = Student.query.get_or_404(student_id)
+    
+    # Get attendance records
+    records = Attendance.query.filter_by(student_id=student_id).order_by(
+        Attendance.date.desc(), 
+        Attendance.period
+    ).all()
+    
+    # Get OD activities
+    od_activities = Extracurricular.query.filter(
+        Extracurricular.student_id == student_id,
+        Extracurricular.notes.like('OD_%')
+    ).all()
+    
+    # Create OD info dictionary
+    od_info = {}
+    for od in od_activities:
+        activity_name = od.notes.replace('OD_', '')
+        period_found = None
+        
+        if '_period_' in od.notes:
+            try:
+                period_part = od.notes.split('_period_')[1]
+                period_found = int(period_part)
+                activity_name = activity_name.split('_period_')[0]
+            except:
+                pass
+        
+        if period_found:
+            key = f"{od.activity_date}_{period_found}"
+            od_info[key] = {
+                'activity_name': activity_name,
+                'activity_type': od.activity_type.name if od.activity_type else 'General'
+            }
+    
+    # Build daily attendance
+    daily_attendance = defaultdict(dict)
+    
+    for record in records:
+        staff = db.session.get(Staff, record.marked_by)
+        record.marked_by_name = staff.name if staff else 'System'
+        
+        od_key = f"{record.date}_{record.period}"
+        record.is_od = od_key in od_info
+        record.od_activity_name = od_info[od_key]['activity_name'] if record.is_od else ''
+        
+        daily_attendance[record.date.strftime('%Y-%m-%d')][record.period] = {
+            'status': record.status,
+            'is_od': record.is_od,
+            'od_activity_name': record.od_activity_name,
+            'marked_by': record.marked_by_name
+        }
+    
+    # Fill missing periods
+    for date in list(daily_attendance.keys()):
+        for period in range(1, 7):
+            if period not in daily_attendance[date]:
+                daily_attendance[date][period] = {
+                    'status': 'absent',
+                    'is_od': False,
+                    'od_activity_name': '',
+                    'marked_by': 'Not Marked'
+                }
+    
+    # Calculate statistics
+    total_periods, present_periods, od_periods, absent_periods, percentage = calculate_student_attendance(student_id)
+    total_days = len(daily_attendance)
+    
+    return jsonify({
+        'success': True,
+        'student': {
+            'id': student.id,
+            'name': student.name,
+            'register_number': student.register_number,
+            'gender': student.gender,
+            'year': student.year,
+            'section': student.section,
+            'batch': student.batch,
+            'dob': student.dob,
+            'umis': student.umis,
+            'mobile_student': student.mobile_student,
+            'mobile_parent': student.mobile_parent,
+            'parent_guardian_name': student.parent_guardian_name,
+            'blood_group': student.blood_group
+        },
+        'attendance': {
+            'total_days': total_days,
+            'present': present_periods,
+            'od': od_periods,
+            'absent': absent_periods,
+            'percentage': percentage
+        },
+        'daily_attendance': daily_attendance
+    })
+
 @app.route('/logout')
 def logout():
     session.clear()

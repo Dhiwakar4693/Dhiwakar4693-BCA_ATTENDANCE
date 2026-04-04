@@ -20,7 +20,7 @@
             background: white;
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             overflow: hidden;
         }
@@ -58,6 +58,27 @@
             padding: 16px 20px;
             margin: 20px;
             border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .class-info h3 { font-size: 1.1em; }
+        .class-info p { font-size: 0.85em; opacity: 0.9; margin-top: 5px; }
+        .student-info-btn {
+            background: #17a2b8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .student-info-btn:hover {
+            background: #138496;
+            transform: translateY(-2px);
         }
         .period-info, .date-info {
             background: #e8f4f8;
@@ -157,6 +178,8 @@
         }
         .btn-save { background: #28a745; color: white; }
         .btn-exit { background: #6c757d; color: white; }
+        
+        /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
@@ -171,11 +194,121 @@
         }
         .modal-content {
             background: white;
-            border-radius: 15px;
-            padding: 25px;
-            width: 350px;
-            max-width: 90%;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 85vh;
+            overflow-y: auto;
+            position: relative;
+            animation: modalFadeIn 0.3s;
         }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-header h2 { font-size: 1.3em; }
+        .close-modal {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 0 10px;
+        }
+        .close-modal:hover { opacity: 0.8; }
+        .modal-body { padding: 20px; }
+        .student-profile-modal {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        .student-profile-modal h3 { margin-bottom: 10px; }
+        .info-grid-modal {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .info-card-modal {
+            background: rgba(255,255,255,0.15);
+            padding: 10px;
+            border-radius: 10px;
+        }
+        .info-card-modal .label {
+            font-size: 0.65em;
+            opacity: 0.8;
+            text-transform: uppercase;
+        }
+        .info-card-modal .value {
+            font-size: 0.9em;
+            font-weight: bold;
+            margin-top: 3px;
+        }
+        .attendance-table-modal {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.75em;
+        }
+        .attendance-table-modal th {
+            background: #667eea;
+            color: white;
+            padding: 8px;
+            text-align: center;
+        }
+        .attendance-table-modal td {
+            padding: 6px;
+            text-align: center;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .present-badge-modal {
+            background: #28a745;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.7em;
+        }
+        .absent-badge-modal {
+            background: #dc3545;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.7em;
+        }
+        .od-badge-modal {
+            background: #17a2b8;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.7em;
+        }
+        .stats-modal {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        .stat-modal {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+            flex: 1;
+        }
+        .stat-modal .number { font-size: 1.3em; font-weight: bold; color: #667eea; }
+        .loading-modal { text-align: center; padding: 40px; color: #666; }
+        
         .activity-btn {
             display: block;
             width: 100%;
@@ -195,6 +328,8 @@
         @media (max-width: 768px) {
             .attendance-btn { padding: 5px 8px; font-size: 0.7em; }
             .button-group { flex-direction: column; }
+            .info-grid-modal { grid-template-columns: 1fr; }
+            .modal-content { width: 95%; }
         }
     </style>
 </head>
@@ -209,8 +344,11 @@
         </div>
 
         <div class="class-info">
-            <h3><span id="yearSection">Loading...</span></h3>
-            <p><span id="deptName">Loading...</span> | Total: <span id="totalStudents">0</span> Students</p>
+            <div>
+                <h3><span id="yearSection">Loading...</span></h3>
+                <p><span id="deptName">Loading...</span> | Total: <span id="totalStudents">0</span> Students</p>
+            </div>
+            <button class="student-info-btn" id="studentInfoBtn">📋 View All Student Info</button>
         </div>
 
         <div class="period-info">📊 Period <span id="periodValue">-</span></div>
@@ -248,12 +386,30 @@
         </div>
     </div>
 
+    <!-- Student Info Modal -->
+    <div id="studentInfoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📋 Student Information</h2>
+                <button class="close-modal" onclick="closeStudentInfoModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="studentInfoBody">
+                <div class="loading-modal">Loading student information...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- OD Modal -->
     <div id="odModal" class="modal">
         <div class="modal-content">
-            <h3>🎯 Select OD Activity</h3>
-            <div id="odActivityList"></div>
-            <button id="closeModalBtn" style="margin-top:15px; padding:10px; width:100%; background:#6c757d; color:white; border:none; border-radius:8px;">Cancel</button>
+            <div class="modal-header">
+                <h3>🎯 Select OD Activity</h3>
+                <button class="close-modal" onclick="closeODModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="odActivityList"></div>
+                <button id="closeModalBtn" style="margin-top:15px; padding:10px; width:100%; background:#6c757d; color:white; border:none; border-radius:8px;">Cancel</button>
+            </div>
         </div>
     </div>
 
@@ -291,7 +447,7 @@
                         document.getElementById('staffName').innerText = data.staff_name;
                         document.getElementById('staffSubjects').innerText = data.staff_subjects.join(', ');
                         document.getElementById('yearSection').innerText = data.year + ' - Section ' + data.section;
-                        document.getElementById('deptName').innerText = data.department_name + ' (' + data.department_code + ')';
+                        document.getElementById('deptName').innerText = data.department_name;
                         document.getElementById('totalStudents').innerText = studentsData.length;
                         document.getElementById('periodValue').innerText = currentPeriod;
                         document.getElementById('dateValue').innerText = currentDate;
@@ -313,7 +469,7 @@
                 });
         }
         
-        // Render students table
+        // Render students table (without individual info buttons)
         function renderStudentsTable() {
             var tbody = document.getElementById('studentsTableBody');
             tbody.innerHTML = '';
@@ -337,7 +493,7 @@
                 cell1.textContent = regNo;
                 
                 var cell2 = row.insertCell(1);
-                cell2.textContent = name;
+                cell2.textContent = name;  // Removed the info button
                 
                 var cell3 = row.insertCell(2);
                 cell3.className = 'attendance-cell';
@@ -372,6 +528,99 @@
             }
             
             attachEventListeners();
+        }
+        
+        // Show Student Info Modal for a specific student
+        function showStudentInfo(studentId) {
+            var modal = document.getElementById('studentInfoModal');
+            var body = document.getElementById('studentInfoBody');
+            body.innerHTML = '<div class="loading-modal">Loading student information...</div>';
+            modal.style.display = 'flex';
+            
+            fetch('/get_student_full_details/' + studentId)
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        renderStudentInfoModal(data);
+                    } else {
+                        body.innerHTML = '<div class="loading-modal" style="color: red;">Error: ' + data.error + '</div>';
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error:', error);
+                    body.innerHTML = '<div class="loading-modal" style="color: red;">Failed to load student information</div>';
+                });
+        }
+        
+        // Render Student Info Modal
+        function renderStudentInfoModal(data) {
+            var student = data.student;
+            var attendance = data.attendance;
+            var dailyAttendance = data.daily_attendance;
+            
+            var html = '';
+            
+            // Student Profile Section
+            html += '<div class="student-profile-modal">';
+            html += '<h3>' + student.name + ' (' + (student.gender === 'M' ? 'Male' : 'Female') + ')</h3>';
+            html += '<p>Register Number: <strong>' + student.register_number + '</strong></p>';
+            html += '<div class="info-grid-modal">';
+            html += '<div class="info-card-modal"><div class="label">📚 Year & Section</div><div class="value">' + student.year + ' - Section ' + student.section + '</div></div>';
+            html += '<div class="info-card-modal"><div class="label">🎓 Batch</div><div class="value">' + (student.batch || 'Not specified') + '</div></div>';
+            if (student.dob) html += '<div class="info-card-modal"><div class="label">🎂 Date of Birth</div><div class="value">' + student.dob + '</div></div>';
+            if (student.umis) html += '<div class="info-card-modal"><div class="label">🆔 UMIS Number</div><div class="value">' + student.umis + '</div></div>';
+            if (student.mobile_student) html += '<div class="info-card-modal"><div class="label">📱 Mobile</div><div class="value">' + student.mobile_student + '</div></div>';
+            if (student.mobile_parent) html += '<div class="info-card-modal"><div class="label">📞 Parent Mobile</div><div class="value">' + student.mobile_parent + '</div></div>';
+            if (student.parent_guardian_name) html += '<div class="info-card-modal"><div class="label">👪 Parent/Guardian</div><div class="value">' + student.parent_guardian_name + '</div></div>';
+            if (student.blood_group) html += '<div class="info-card-modal"><div class="label">🩸 Blood Group</div><div class="value"><span style="background:#dc3545; color:white; padding:2px 8px; border-radius:15px;">' + student.blood_group + '</span></div></div>';
+            html += '</div></div>';
+            
+            // Attendance Statistics
+            html += '<div class="stats-modal">';
+            html += '<div class="stat-modal"><div class="number">' + attendance.total_days + '</div><div>Total Days</div></div>';
+            html += '<div class="stat-modal"><div class="number" style="color:#28a745;">' + attendance.present + '</div><div>Present</div></div>';
+            html += '<div class="stat-modal"><div class="number" style="color:#17a2b8;">' + attendance.od + '</div><div>OD</div></div>';
+            html += '<div class="stat-modal"><div class="number" style="color:#dc3545;">' + attendance.absent + '</div><div>Absent</div></div>';
+            html += '<div class="stat-modal"><div class="number" style="color:#28a745;">' + attendance.percentage + '%</div><div>Percentage</div></div>';
+            html += '</div>';
+            
+            // Daily Attendance Table
+            html += '<h4 style="margin: 15px 0 10px;">Daily Attendance Record</h4>';
+            html += '<div class="table-wrapper">';
+            html += '<table class="attendance-table-modal">';
+            html += '<thead><tr><th>Date</th><th>P1</th><th>P2</th><th>P3</th><th>P4</th><th>P5</th><th>P6</th></tr></thead>';
+            html += '<tbody>';
+            
+            for (var date in dailyAttendance) {
+                html += '<tr>';
+                html += '<td><strong>' + formatDate(date) + '</strong></td>';
+                for (var period = 1; period <= 6; period++) {
+                    var record = dailyAttendance[date][period];
+                    if (record && record.status === 'present') {
+                        if (record.is_od) {
+                            html += '<td><span class="od-badge-modal">OD</span><br><small>' + (record.od_activity_name || '') + '</small></td>';
+                        } else {
+                            html += '<td><span class="present-badge-modal">P</span></td>';
+                        }
+                    } else {
+                        html += '<td><span class="absent-badge-modal">A</span></td>';
+                    }
+                }
+                html += '</tr>';
+            }
+            
+            html += '</tbody></table></div>';
+            
+            document.getElementById('studentInfoBody').innerHTML = html;
+        }
+        
+        function formatDate(dateStr) {
+            var d = new Date(dateStr);
+            return d.getDate() + '-' + (d.getMonth() + 1) + '-' + d.getFullYear();
+        }
+        
+        function closeStudentInfoModal() {
+            document.getElementById('studentInfoModal').style.display = 'none';
         }
         
         // Render activity types
@@ -465,12 +714,11 @@
             .catch(function(error) { console.error('Error:', error); });
         }
         
-        // Open OD modal - Store the period from the clicked button
+        // Open OD modal
         function openODModal(studentId, regNo, period) {
             selectedStudentId = studentId;
             selectedRegNo = regNo;
             selectedPeriod = period;
-            console.log("Opening OD modal for Period:", selectedPeriod);
             document.getElementById('odModal').style.display = 'flex';
         }
         
@@ -482,12 +730,11 @@
             selectedPeriod = null;
         }
         
-        // Confirm OD - Use the stored period
+        // Confirm OD
         function confirmOD(activityId, activityName) {
             if (!selectedStudentId) return;
             
             var periodToMark = selectedPeriod;
-            console.log("Marking OD for Period:", periodToMark);
             
             var odKey = selectedStudentId + '_period_' + periodToMark;
             
@@ -508,7 +755,6 @@
                 return;
             }
             
-            // Update UI
             presentBtn.classList.remove('btn-active');
             presentBtn.classList.add('btn-inactive');
             absentBtn.classList.remove('btn-active');
@@ -516,7 +762,6 @@
             odBtn.classList.remove('btn-inactive');
             odBtn.classList.add('btn-active');
             
-            // Send to server with the correct period
             fetch('/staff_mark_od', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -586,6 +831,32 @@
                 });
             }
         }
+        
+        // Student Info Button - Show all students list
+        document.getElementById('studentInfoBtn').addEventListener('click', function() {
+            var modal = document.getElementById('studentInfoModal');
+            var body = document.getElementById('studentInfoBody');
+            body.innerHTML = '<div class="loading-modal">Loading all students information...</div>';
+            modal.style.display = 'flex';
+            
+            var allStudentsInfo = '<div style="max-height: 70vh; overflow-y: auto;">';
+            
+            for (var i = 0; i < studentsData.length; i++) {
+                var student = studentsData[i];
+                allStudentsInfo += '<div style="border: 1px solid #e0e0e0; border-radius: 10px; margin-bottom: 15px; padding: 15px;">';
+                allStudentsInfo += '<h4 style="color: #667eea;">' + student.name + ' (' + student.register_number + ')</h4>';
+                allStudentsInfo += '<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 10px;">';
+                allStudentsInfo += '<div><strong>Year/Section:</strong> ' + student.year + ' - ' + student.section + '</div>';
+                allStudentsInfo += '<div><strong>Batch:</strong> ' + (student.batch || 'N/A') + '</div>';
+                allStudentsInfo += '<div><strong>Gender:</strong> ' + (student.gender === 'M' ? 'Male' : 'Female') + '</div>';
+                allStudentsInfo += '</div>';
+                allStudentsInfo += '<button onclick="showStudentInfo(' + student.id + ')" style="margin-top: 10px; background: #17a2b8; color: white; border: none; padding: 5px 15px; border-radius: 5px; cursor: pointer;">📋 View Full Details</button>';
+                allStudentsInfo += '</div>';
+            }
+            
+            allStudentsInfo += '</div>';
+            body.innerHTML = allStudentsInfo;
+        });
         
         // BULK PRESENT
         document.getElementById('bulkPresentBtn').addEventListener('click', function() {
@@ -776,11 +1047,14 @@
             window.location.href = '/clear_temp_attendance';
         });
         
-        // Close modal
+        // Close modals
         document.getElementById('closeModalBtn').addEventListener('click', closeODModal);
         window.addEventListener('click', function(e) {
             if (e.target === document.getElementById('odModal')) {
                 closeODModal();
+            }
+            if (e.target === document.getElementById('studentInfoModal')) {
+                closeStudentInfoModal();
             }
         });
         
