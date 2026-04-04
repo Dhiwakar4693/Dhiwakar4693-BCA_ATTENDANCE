@@ -296,10 +296,6 @@
                 <input type="text" name="dept_name" placeholder="e.g., BCA, MCA, MBA" required>
             </div>
             <div class="form-group">
-                <label>Department Code *</label>
-                <input type="text" name="dept_code" placeholder="e.g., BCA, MCA" required>
-            </div>
-            <div class="form-group">
                 <label>Admin Name *</label>
                 <input type="text" name="admin_name" required>
             </div>
@@ -317,7 +313,6 @@
                 <thead>
                     <tr>
                         <th>Department Name</th>
-                        <th>Code</th>
                         <th>Admin Details</th>
                         <th>Action</th>
                     </tr>
@@ -326,7 +321,6 @@
                     {% for dept in all_departments %}
                     <tr id="dept-row-{{ dept.id }}">
                         <td>{{ dept.name }}</div>
-                        <td>{{ dept.code }}</div>
                         <td class="admin-details">
                             {% set admin = dept_admins.get(dept.id) %}
                             {% if admin %}

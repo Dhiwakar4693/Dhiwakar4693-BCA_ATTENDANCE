@@ -44,7 +44,6 @@ class Department(db.Model):
     __tablename__ = 'departments'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
-    code = db.Column(db.String(20), unique=True, nullable=False)
     description = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.now)
     
@@ -58,9 +57,16 @@ class Student(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     register_number = db.Column(db.String(20), unique=True, nullable=False)
     name = db.Column(db.String(100), nullable=False)
+    gender = db.Column(db.String(1), nullable=False, default='M')
     year = db.Column(db.String(20), nullable=False)
     section = db.Column(db.String(1), nullable=False)
     batch = db.Column(db.String(20))
+    dob = db.Column(db.String(50))
+    umis = db.Column(db.String(50))
+    mobile_student = db.Column(db.String(15))
+    mobile_parent = db.Column(db.String(15))
+    parent_guardian_name = db.Column(db.String(100))
+    blood_group = db.Column(db.String(5))
     department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     
@@ -173,6 +179,68 @@ with app.app_context():
             print("✅ Added subject column to attendance")
         except:
             pass
+    
+    # Add new columns to students table
+    try:
+        result = db.session.execute(db.text("PRAGMA table_info(students)"))
+        existing_columns = [row[1] for row in result.fetchall()]
+        
+        if 'gender' not in existing_columns:
+            db.session.execute(db.text('ALTER TABLE students ADD COLUMN gender VARCHAR(1) DEFAULT "M"'))
+            print("✅ Added gender column")
+        
+        if 'dob' not in existing_columns:
+            db.session.execute(db.text('ALTER TABLE students ADD COLUMN dob VARCHAR(50)'))
+            print("✅ Added dob column")
+        
+        if 'umis' not in existing_columns:
+            db.session.execute(db.text('ALTER TABLE students ADD COLUMN umis VARCHAR(50)'))
+            print("✅ Added umis column")
+        
+        if 'mobile_student' not in existing_columns:
+            db.session.execute(db.text('ALTER TABLE students ADD COLUMN mobile_student VARCHAR(15)'))
+            print("✅ Added mobile_student column")
+        
+        if 'mobile_parent' not in existing_columns:
+            db.session.execute(db.text('ALTER TABLE students ADD COLUMN mobile_parent VARCHAR(15)'))
+            print("✅ Added mobile_parent column")
+        
+        if 'parent_guardian_name' not in existing_columns:
+            db.session.execute(db.text('ALTER TABLE students ADD COLUMN parent_guardian_name VARCHAR(100)'))
+            print("✅ Added parent_guardian_name column")
+        
+        if 'blood_group' not in existing_columns:
+            db.session.execute(db.text('ALTER TABLE students ADD COLUMN blood_group VARCHAR(5)'))
+            print("✅ Added blood_group column")
+        
+        db.session.commit()
+    except Exception as e:
+        print(f"Note: Column addition: {e}")
+    
+    # Remove code column from departments if exists
+    try:
+        result = db.session.execute(db.text("PRAGMA table_info(departments)"))
+        existing_columns = [row[1] for row in result.fetchall()]
+        
+        if 'code' in existing_columns:
+            db.session.execute(db.text('ALTER TABLE departments RENAME TO departments_old'))
+            db.session.execute(db.text('''
+                CREATE TABLE departments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name VARCHAR(100) UNIQUE NOT NULL,
+                    description VARCHAR(200),
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            '''))
+            db.session.execute(db.text('''
+                INSERT INTO departments (id, name, description, created_at)
+                SELECT id, name, description, created_at FROM departments_old
+            '''))
+            db.session.execute(db.text('DROP TABLE departments_old'))
+            db.session.commit()
+            print("✅ Removed code column from departments table")
+    except Exception as e:
+        print(f"Note: Code column removal: {e}")
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -184,16 +252,13 @@ def calculate_student_attendance(student_id):
     Returns: (total_periods, present_periods, od_periods, absent_periods, percentage)
     """
     
-    # Get all attendance records
     records = Attendance.query.filter_by(student_id=student_id).all()
     
-    # Get OD activities
     od_activities = Extracurricular.query.filter(
         Extracurricular.student_id == student_id,
         Extracurricular.notes.like('OD_%')
     ).all()
     
-    # Create set of (date, period) that are OD
     od_set = set()
     for od in od_activities:
         period_found = None
@@ -206,35 +271,27 @@ def calculate_student_attendance(student_id):
         if period_found:
             od_set.add((od.activity_date, period_found))
     
-    # Get all unique dates
     dates_with_records = set(r.date for r in records)
     
     total_present_periods = 0
     total_od_periods = 0
     total_periods_count = 0
     
-    # For each date, check all 6 periods
     for date in dates_with_records:
-        # Get records for this date
         date_records = [r for r in records if r.date == date]
         period_status = {r.period: r.status for r in date_records}
         
-        # Check each period 1-6
         for period in range(1, 7):
             total_periods_count += 1
             
-            # Check if it's an OD period first
             if (date, period) in od_set:
                 total_od_periods += 1
-                total_present_periods += 1  # OD counts as present
-            # Check if present in attendance record
+                total_present_periods += 1
             elif period in period_status and period_status[period] == 'present':
                 total_present_periods += 1
-            # Otherwise absent - no addition
     
     total_absent_periods = total_periods_count - total_present_periods
     
-    # Calculate percentage
     if total_periods_count > 0:
         percentage = (total_present_periods / total_periods_count) * 100
     else:
@@ -342,7 +399,12 @@ def admin_dashboard():
     total_activity_types = ActivityType.query.filter_by(department_id=session['department_id']).count()
     total_sections = ClassSection.query.filter_by(department_id=session['department_id']).count()
     
-    students = Student.query.filter_by(department_id=session['department_id']).all()
+    students = Student.query.filter_by(
+        department_id=session['department_id']
+    ).order_by(
+        Student.gender.desc(),
+        Student.name.asc()
+    ).all()
     
     staff_assignments = StaffDepartment.query.filter_by(department_id=session['department_id']).all()
     staff_ids = [sa.staff_id for sa in staff_assignments]
@@ -488,11 +550,10 @@ def add_new_staff_page():
 @app.route('/add_department', methods=['POST'])
 def add_department():
     dept_name = request.form.get('dept_name', '').strip()
-    dept_code = request.form.get('dept_code', '').strip().upper()
     admin_name = request.form.get('admin_name', '').strip()
     admin_password = request.form.get('admin_password', '').strip()
     
-    if not dept_name or not dept_code or not admin_name or not admin_password:
+    if not dept_name or not admin_name or not admin_password:
         all_departments = Department.query.all()
         dept_admins = {}
         for dept in all_departments:
@@ -515,18 +576,6 @@ def add_department():
                              all_departments=all_departments,
                              dept_admins=dept_admins)
     
-    existing_code = Department.query.filter_by(code=dept_code).first()
-    if existing_code:
-        all_departments = Department.query.all()
-        dept_admins = {}
-        for dept in all_departments:
-            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
-            dept_admins[dept.id] = admin
-        return render_template('add_new_department.html', 
-                             error=f'Department code {dept_code} already exists!',
-                             all_departments=all_departments,
-                             dept_admins=dept_admins)
-    
     existing_admin = Staff.query.filter_by(name=admin_name).first()
     if existing_admin:
         all_departments = Department.query.all()
@@ -540,7 +589,7 @@ def add_department():
                              dept_admins=dept_admins)
     
     try:
-        department = Department(name=dept_name, code=dept_code)
+        department = Department(name=dept_name)
         db.session.add(department)
         db.session.flush()
         
@@ -729,6 +778,62 @@ def get_sections(department_id, year):
     section_list = [s.section for s in sections]
     return jsonify({'sections': section_list})
 
+@app.route('/student_details/<int:student_id>')
+def student_details(student_id):
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return redirect(url_for('index'))
+    
+    student = Student.query.get_or_404(student_id)
+    return render_template('student_details.html', student=student)
+
+@app.route('/edit_register_number/<int:student_id>', methods=['GET', 'POST'])
+def edit_register_number(student_id):
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return redirect(url_for('index'))
+    
+    student = Student.query.get_or_404(student_id)
+    year = student.year
+    section = student.section
+    
+    if request.method == 'POST':
+        new_register_number = request.form.get('register_number', '').strip()
+        
+        if not new_register_number:
+            session['attendance_message'] = '❌ Register number cannot be empty!'
+            return redirect(url_for('edit_register_number', student_id=student_id))
+        
+        existing = Student.query.filter(
+            Student.register_number == new_register_number,
+            Student.id != student_id
+        ).first()
+        
+        if existing:
+            session['attendance_message'] = f'❌ Register number "{new_register_number}" already exists for student: {existing.name}'
+            return redirect(url_for('edit_register_number', student_id=student_id))
+        
+        try:
+            old_reg_no = student.register_number
+            student.register_number = new_register_number
+            db.session.commit()
+            
+            if session.get('role') == 'student' and session.get('student_id') == student_id:
+                session['student_reg'] = new_register_number
+            
+            session['attendance_message'] = f'✅ Register number changed from "{old_reg_no}" to "{new_register_number}" successfully!'
+            return redirect(url_for('view_class', year=year, section=section))
+            
+        except Exception as e:
+            db.session.rollback()
+            session['attendance_message'] = f'❌ Error: {str(e)}'
+            return redirect(url_for('edit_register_number', student_id=student_id))
+    
+    return render_template('edit_register_number.html', 
+                         student=student, 
+                         year=year, 
+                         section=section)
+
 # ==================== STAFF ROUTES ====================
 
 @app.route('/staff_dashboard')
@@ -753,6 +858,9 @@ def staff_dashboard():
         department_id=department_id,
         year=year, 
         section=section
+    ).order_by(
+        Student.gender.desc(),
+        Student.name.asc()
     ).all()
     
     today = datetime.now().date()
@@ -795,7 +903,6 @@ def staff_dashboard():
                          activity_types=activity_types,
                          department=department)
 
-
 @app.route('/get_staff_dashboard_data')
 def get_staff_dashboard_data():
     if session.get('role') != 'staff':
@@ -817,6 +924,9 @@ def get_staff_dashboard_data():
             department_id=department_id,
             year=year,
             section=section
+        ).order_by(
+            Student.gender.desc(),
+            Student.name.asc()
         ).all()
         
         students_list = []
@@ -827,7 +937,8 @@ def get_staff_dashboard_data():
                 'name': student.name,
                 'year': student.year,
                 'section': student.section,
-                'batch': student.batch
+                'batch': student.batch,
+                'gender': student.gender
             })
         
         existing_attendance = Attendance.query.filter(
@@ -866,7 +977,6 @@ def get_staff_dashboard_data():
             'staff_name': staff.name if staff else '',
             'staff_subjects': staff_subjects,
             'department_name': department.name if department else '',
-            'department_code': department.code if department else '',
             'year': year,
             'section': section,
             'period': period,
@@ -878,7 +988,6 @@ def get_staff_dashboard_data():
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
-
 
 @app.route('/update_temp_attendance', methods=['POST'])
 def update_temp_attendance():
@@ -904,7 +1013,6 @@ def update_temp_attendance():
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
-
 
 @app.route('/staff_mark_od', methods=['POST'])
 def staff_mark_od():
@@ -950,7 +1058,6 @@ def staff_mark_od():
         return jsonify({'success': True, 'message': f'OD marked for period {period}'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
-
 
 @app.route('/save_attendance')
 def save_attendance():
@@ -1048,7 +1155,6 @@ def save_attendance():
         flash(f'❌ Error: {str(e)}', 'error')
         return redirect(url_for('staff_dashboard'))
 
-
 @app.route('/clear_temp_attendance')
 def clear_temp_attendance():
     session.pop('temp_attendance', None)
@@ -1062,23 +1168,40 @@ def student_dashboard():
         return redirect(url_for('index'))
     
     student_id = session.get('student_id')
-    name = session.get('student_name')
-    reg_no = session.get('student_reg')
-    year = session.get('year')
-    section = session.get('section')
+    
+    student = Student.query.get(student_id)
+    if not student:
+        session.clear()
+        return redirect(url_for('index'))
+    
+    session['student_name'] = student.name
+    session['student_reg'] = student.register_number
+    session['year'] = student.year
+    session['section'] = student.section
+    
+    name = student.name
+    reg_no = student.register_number
+    year = student.year
+    section = student.section
+    gender = student.gender
+    batch = student.batch
+    dob = student.dob or ''
+    umis = student.umis or ''
+    mobile_student = student.mobile_student or ''
+    mobile_parent = student.mobile_parent or ''
+    parent_guardian_name = student.parent_guardian_name or ''
+    blood_group = student.blood_group or ''
     
     records = Attendance.query.filter_by(student_id=student_id).order_by(
         Attendance.date.desc(), 
         Attendance.period
     ).all()
     
-    # Get OD activities
     od_activities = Extracurricular.query.filter(
         Extracurricular.student_id == student_id,
         Extracurricular.notes.like('OD_%')
     ).all()
     
-    # Create OD info dictionary with (date, period) as key
     od_info = {}
     for od in od_activities:
         activity_name = od.notes.replace('OD_', '')
@@ -1099,21 +1222,18 @@ def student_dashboard():
                 'activity_type': od.activity_type.name if od.activity_type else 'General'
             }
     
-    # Build daily attendance
     daily_attendance = defaultdict(dict)
     
     for record in records:
         staff = db.session.get(Staff, record.marked_by)
         record.marked_by_name = staff.name if staff else 'System'
         
-        # Check if THIS SPECIFIC period on THIS DATE has OD
         od_key = f"{record.date}_{record.period}"
         record.is_od = od_key in od_info
         record.od_activity_name = od_info[od_key]['activity_name'] if record.is_od else ''
         
         daily_attendance[record.date][record.period] = record
     
-    # Fill missing periods with default values
     for date in list(daily_attendance.keys()):
         for period in range(1, 7):
             if period not in daily_attendance[date]:
@@ -1125,7 +1245,6 @@ def student_dashboard():
                 })
                 daily_attendance[date][period] = virtual_record
     
-    # Calculate statistics using updated function with OD count
     total_periods, present_periods, od_periods, absent_periods, percentage = calculate_student_attendance(student_id)
     total_days = len(daily_attendance)
     
@@ -1134,6 +1253,14 @@ def student_dashboard():
                          reg_no=reg_no,
                          year=year,
                          section=section,
+                         gender=gender,
+                         batch=batch,
+                         dob=dob,
+                         umis=umis,
+                         mobile_student=mobile_student,
+                         mobile_parent=mobile_parent,
+                         parent_guardian_name=parent_guardian_name,
+                         blood_group=blood_group,
                          daily_attendance=dict(daily_attendance),
                          total_days=total_days,
                          present=present_periods,
@@ -1155,16 +1282,17 @@ def view_class(year, section):
         department_id=department_id,
         year=year, 
         section=section
+    ).order_by(
+        Student.gender.desc(),
+        Student.name.asc()
     ).all()
     
-    # Get EC activities for all students
     student_ids = [s.id for s in students]
     ec_activities = Extracurricular.query.filter(
         Extracurricular.student_id.in_(student_ids),
         ~Extracurricular.notes.like('OD_%')
     ).all()
     
-    # Group EC activities by student
     ec_by_student = defaultdict(list)
     for activity in ec_activities:
         ec_by_student[activity.student_id].append({
@@ -1182,6 +1310,7 @@ def view_class(year, section):
             'id': student.id,
             'name': student.name,
             'reg_no': student.register_number,
+            'gender': student.gender,
             'batch': student.batch,
             'total_days': total_days,
             'total_periods': total_periods,
@@ -1197,7 +1326,6 @@ def view_class(year, section):
                          section=section,
                          students=summary)
 
-
 @app.route('/print_attendance/<year>/<section>')
 def print_attendance(year, section):
     role = session.get('role')
@@ -1210,6 +1338,9 @@ def print_attendance(year, section):
         department_id=department_id,
         year=year, 
         section=section
+    ).order_by(
+        Student.gender.desc(),
+        Student.name.asc()
     ).all()
     
     summary = []
@@ -1217,6 +1348,7 @@ def print_attendance(year, section):
         summary.append({
             'name': student.name,
             'reg_no': student.register_number,
+            'gender': student.gender,
             'batch': student.batch
         })
     
@@ -1226,7 +1358,6 @@ def print_attendance(year, section):
                          students=summary,
                          print_date=datetime.now().strftime('%d-%m-%Y %H:%M'))
 
-
 @app.route('/student_attendance_details/<int:student_id>/<year>/<section>')
 def student_attendance_details(student_id, year, section):
     role = session.get('role')
@@ -1235,19 +1366,16 @@ def student_attendance_details(student_id, year, section):
     
     student = Student.query.get_or_404(student_id)
     
-    # Get attendance records
     records = Attendance.query.filter_by(student_id=student_id).order_by(
         Attendance.date.desc(), 
         Attendance.period
     ).all()
     
-    # Get OD activities
     od_activities = Extracurricular.query.filter(
         Extracurricular.student_id == student_id,
         Extracurricular.notes.like('OD_%')
     ).all()
     
-    # Create OD info dictionary with (date, period) as key
     od_info = {}
     for od in od_activities:
         activity_name = od.notes.replace('OD_', '')
@@ -1268,22 +1396,18 @@ def student_attendance_details(student_id, year, section):
                 'activity_type': od.activity_type.name if od.activity_type else 'General'
             }
     
-    # Build daily attendance
-    from collections import defaultdict
     daily_attendance = defaultdict(dict)
     
     for record in records:
         staff = db.session.get(Staff, record.marked_by)
         record.marked_by_name = staff.name if staff else 'System'
         
-        # Check if THIS SPECIFIC period on THIS DATE has OD activity
         od_key = f"{record.date}_{record.period}"
         record.is_od = od_key in od_info
         record.od_activity_name = od_info[od_key]['activity_name'] if record.is_od else ''
         
         daily_attendance[record.date][record.period] = record
     
-    # Fill missing periods with default values
     for date in list(daily_attendance.keys()):
         for period in range(1, 7):
             if period not in daily_attendance[date]:
@@ -1295,7 +1419,6 @@ def student_attendance_details(student_id, year, section):
                 })
                 daily_attendance[date][period] = virtual_record
     
-    # Calculate statistics using updated function with OD count
     total_periods, present_periods, od_periods, absent_periods, percentage = calculate_student_attendance(student_id)
     total_days = len(daily_attendance)
     
@@ -1309,7 +1432,6 @@ def student_attendance_details(student_id, year, section):
                          absent=absent_periods,
                          od=od_periods,
                          percentage=percentage)
-
 
 @app.route('/manage_attendance/<int:student_id>/<year>/<section>')
 def manage_attendance(student_id, year, section):
@@ -1335,7 +1457,6 @@ def manage_attendance(student_id, year, section):
                          year=year,
                          section=section,
                          attendance_by_date=dict(attendance_by_date))
-
 
 @app.route('/edit_attendance/<int:attendance_id>', methods=['GET', 'POST'])
 def edit_attendance(attendance_id):
@@ -1364,7 +1485,6 @@ def edit_attendance(attendance_id):
                          student=student,
                          staff=staff)
 
-
 @app.route('/delete_attendance/<int:attendance_id>')
 def delete_attendance(attendance_id):
     role = session.get('role')
@@ -1382,7 +1502,6 @@ def delete_attendance(attendance_id):
     session['attendance_message'] = f'✅ Attendance record deleted for {student.name} on {attendance.date.strftime("%d-%m-%Y")} Period {attendance.period}'
     
     return redirect(url_for('manage_attendance', student_id=student.id, year=year, section=section))
-
 
 @app.route('/add_custom_attendance/<int:student_id>/<year>/<section>', methods=['GET', 'POST'])
 def add_custom_attendance(student_id, year, section):
@@ -1437,7 +1556,6 @@ def add_custom_attendance(student_id, year, section):
                          section=section,
                          staff=staff)
 
-
 @app.route('/add_previous_attendance/<int:student_id>', methods=['GET', 'POST'])
 def add_previous_attendance(student_id):
     role = session.get('role')
@@ -1488,7 +1606,6 @@ def add_previous_attendance(student_id):
     return render_template('add_previous_attendance.html',
                          student=student,
                          staff=staff)
-
 
 @app.route('/add_new_date_attendance/<int:student_id>/<year>/<section>', methods=['GET', 'POST'])
 def add_new_date_attendance(student_id, year, section):
@@ -1543,7 +1660,6 @@ def add_new_date_attendance(student_id, year, section):
                          section=section,
                          staff=staff)
 
-
 @app.route('/monthly_attendance/<year>/<section>')
 def monthly_attendance(year, section):
     role = session.get('role')
@@ -1556,7 +1672,11 @@ def monthly_attendance(year, section):
         department_id=department_id,
         year=year, 
         section=section
+    ).order_by(
+        Student.gender.desc(),
+        Student.name.asc()
     ).all()
+    
     student_ids = [s.id for s in students]
     all_attendance = Attendance.query.filter(Attendance.student_id.in_(student_ids)).all()
     
@@ -1613,7 +1733,6 @@ def monthly_attendance(year, section):
                          months_data=months_data,
                          students=students)
 
-
 @app.route('/monthly_attendance_detail/<year>/<section>/<month_key>')
 def monthly_attendance_detail(year, section, month_key):
     role = session.get('role')
@@ -1626,7 +1745,11 @@ def monthly_attendance_detail(year, section, month_key):
         department_id=department_id,
         year=year, 
         section=section
+    ).order_by(
+        Student.gender.desc(),
+        Student.name.asc()
     ).all()
+    
     student_ids = [s.id for s in students]
     
     start_date = datetime.strptime(month_key + '-01', '%Y-%m-%d').date()
@@ -1687,7 +1810,6 @@ def monthly_attendance_detail(year, section, month_key):
                          student_attendance=student_attendance,
                          students=students)
 
-
 @app.route('/ec_types', methods=['GET', 'POST'])
 def ec_types():
     role = session.get('role')
@@ -1713,7 +1835,6 @@ def ec_types():
     activities = ActivityType.query.filter_by(department_id=department_id).order_by(ActivityType.name).all()
     return render_template('ec_types.html', activities=activities)
 
-
 @app.route('/delete_activity_type/<int:activity_id>')
 def delete_activity_type(activity_id):
     role = session.get('role')
@@ -1727,7 +1848,6 @@ def delete_activity_type(activity_id):
     session['ec_message'] = f'✅ Activity type "{name}" deleted successfully!'
     return redirect(url_for('ec_types'))
 
-
 @app.route('/all_ec_activities')
 def all_ec_activities():
     role = session.get('role')
@@ -1738,7 +1858,11 @@ def all_ec_activities():
     
     all_activities = Extracurricular.query.filter(
         ~Extracurricular.notes.like('OD_%')
-    ).join(Student).filter(Student.department_id == department_id).order_by(Extracurricular.activity_date.desc()).all()
+    ).join(Student).filter(Student.department_id == department_id).order_by(
+        Student.gender.desc(),
+        Student.name.asc(),
+        Extracurricular.activity_date.desc()
+    ).all()
     
     grouped_data = {}
     
@@ -1772,7 +1896,6 @@ def all_ec_activities():
     return render_template('all_ec_activities.html', 
                          grouped_data=grouped_data,
                          activity_types=activity_types)
-
 
 @app.route('/od_by_date', methods=['GET', 'POST'])
 def od_by_date():
@@ -1839,7 +1962,6 @@ def od_by_date():
                          students=students_with_od, 
                          selected_date=selected_date)
 
-
 @app.route('/ec_activity/<int:student_id>/<year>/<section>', methods=['GET', 'POST'])
 def ec_activity(student_id, year, section):
     role = session.get('role')
@@ -1895,7 +2017,6 @@ def ec_activity(student_id, year, section):
                          section=section,
                          activity_types=activity_types)
 
-
 @app.route('/delete_student_ec', methods=['POST'])
 def delete_student_ec():
     role = session.get('role')
@@ -1920,7 +2041,6 @@ def delete_student_ec():
         return jsonify({'success': True, 'message': 'Activity deleted successfully'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
-
 
 @app.route('/add_section', methods=['POST'])
 def add_section():
@@ -1952,7 +2072,6 @@ def add_section():
     
     return jsonify({'success': True, 'message': f'Section {section} added for {year}'})
 
-
 @app.route('/delete_section', methods=['POST'])
 def delete_section():
     role = session.get('role')
@@ -1980,7 +2099,6 @@ def delete_section():
     
     return jsonify({'success': True, 'message': f'Section {section.section} deleted for {section.year}'})
 
-
 @app.route('/add_student', methods=['POST'])
 def add_student():
     role = session.get('role')
@@ -1991,12 +2109,20 @@ def add_student():
     
     name = request.form.get('name', '').strip()
     reg_no = request.form.get('register_number', '').strip()
+    gender = request.form.get('gender', '').strip()
     year = request.form.get('year', '')
     section = request.form.get('section', '')
     batch = request.form.get('batch', '').strip()
     
-    if not name or not reg_no or not year or not section or not batch:
-        session['upload_message'] = 'All fields are required!'
+    dob = request.form.get('dob', '').strip()
+    umis = request.form.get('umis', '').strip()
+    mobile_student = request.form.get('mobile_student', '').strip()
+    mobile_parent = request.form.get('mobile_parent', '').strip()
+    parent_guardian_name = request.form.get('parent_guardian_name', '').strip()
+    blood_group = request.form.get('blood_group', '').strip()
+    
+    if not name or not reg_no or not gender or not year or not section or not batch:
+        session['upload_message'] = 'All required fields are required!'
         return redirect(url_for('admin_dashboard'))
     
     existing = Student.query.filter_by(register_number=reg_no).first()
@@ -2008,9 +2134,16 @@ def add_student():
         student = Student(
             name=name,
             register_number=reg_no,
+            gender=gender,
             year=year,
             section=section,
             batch=batch,
+            dob=dob,
+            umis=umis,
+            mobile_student=mobile_student,
+            mobile_parent=mobile_parent,
+            parent_guardian_name=parent_guardian_name,
+            blood_group=blood_group,
             department_id=department_id
         )
         db.session.add(student)
@@ -2021,7 +2154,6 @@ def add_student():
         session['upload_message'] = f'❌ Error: {str(e)}'
     
     return redirect(url_for('admin_dashboard'))
-
 
 @app.route('/upload_students', methods=['POST'])
 def upload_students():
@@ -2067,15 +2199,37 @@ def upload_students():
             for _, row in df.iterrows():
                 name = str(row['name']).strip()
                 reg_no = str(row['register_number']).strip()
+                
+                if 'gender' in df.columns:
+                    gender = str(row['gender']).strip().upper()
+                    if gender not in ['M', 'F']:
+                        gender = 'M'
+                else:
+                    gender = 'M'
+                
                 batch = row['batch'] if 'batch' in df.columns else f"{year[:2]}22-{int(year[:2])+3}25"
+                
+                dob = str(row['dob']).strip() if 'dob' in df.columns and pd.notna(row['dob']) else ''
+                umis = str(row['umis']).strip() if 'umis' in df.columns and pd.notna(row['umis']) else ''
+                mobile_student = str(row['mobile.student']).strip() if 'mobile.student' in df.columns and pd.notna(row['mobile.student']) else ''
+                mobile_parent = str(row['mobile.parent']).strip() if 'mobile.parent' in df.columns and pd.notna(row['mobile.parent']) else ''
+                parent_guardian_name = str(row['parents/gardian name']).strip() if 'parents/gardian name' in df.columns and pd.notna(row['parents/gardian name']) else ''
+                blood_group = str(row['blood group']).strip().upper() if 'blood group' in df.columns and pd.notna(row['blood group']) else ''
                 
                 if reg_no not in existing_reg_numbers and name:
                     student = Student(
                         name=name,
                         register_number=reg_no,
+                        gender=gender,
                         year=year,
                         section=section,
                         batch=str(batch),
+                        dob=dob,
+                        umis=umis,
+                        mobile_student=mobile_student,
+                        mobile_parent=mobile_parent,
+                        parent_guardian_name=parent_guardian_name,
+                        blood_group=blood_group,
                         department_id=department_id
                     )
                     db.session.add(student)
@@ -2090,7 +2244,6 @@ def upload_students():
             session['upload_message'] = f'❌ Error: {str(e)}'
     
     return redirect(url_for('admin_dashboard'))
-
 
 @app.route('/delete_student/<int:student_id>')
 def delete_student(student_id):
@@ -2108,7 +2261,6 @@ def delete_student(student_id):
     db.session.commit()
     
     return redirect(url_for('view_class', year=year, section=section))
-
 
 @app.route('/change_password', methods=['GET', 'POST'])
 def change_password():
@@ -2143,7 +2295,6 @@ def change_password():
         return redirect(url_for('index'))
     
     return render_template('change_password.html')
-
 
 @app.route('/logout')
 def logout():

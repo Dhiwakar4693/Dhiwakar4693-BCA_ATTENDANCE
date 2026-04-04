@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>{{ student.name }} - Complete Details</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .header h1 {
+            font-size: 1.5em;
+            color: #333;
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+        .student-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .student-header h2 {
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+        .student-header p {
+            font-size: 1em;
+            opacity: 0.9;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .info-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s;
+        }
+        .info-card:hover {
+            transform: translateX(5px);
+        }
+        .info-card .label {
+            font-size: 0.7em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .info-card .value {
+            font-size: 1em;
+            font-weight: bold;
+            color: #333;
+            margin-top: 5px;
+        }
+        .full-width {
+            grid-column: span 2;
+        }
+        .blood-group {
+            display: inline-block;
+            background: #dc3545;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+        }
+        @media (max-width: 600px) {
+            .container { padding: 20px; }
+            .info-grid { grid-template-columns: 1fr; }
+            .full-width { grid-column: span 1; }
+            .student-header h2 { font-size: 1.3em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Student Complete Details</h1>
+            <a href="{{ url_for('view_class', year=student.year, section=student.section) }}" class="btn-secondary">← Back to Class</a>
+        </div>
+        
+        <div class="student-header">
+            <h2>{{ student.name }}</h2>
+            <p>{{ student.register_number }}</p>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-card">
+                <div class="label">📚 Year & Section</div>
+                <div class="value">{{ student.year }} - Section {{ student.section }}</div>
+            </div>
+            <div class="info-card">
+                <div class="label">🎓 Batch</div>
+                <div class="value">{{ student.batch }}</div>
+            </div>
+            <div class="info-card">
+                <div class="label">👤 Gender</div>
+                <div class="value">{{ 'Male' if student.gender == 'M' else 'Female' }}</div>
+            </div>
+            <div class="info-card">
+                <div class="label">🩸 Blood Group</div>
+                <div class="value">
+                    {% if student.blood_group %}
+                    <span class="blood-group">{{ student.blood_group }}</span>
+                    {% else %}
+                    Not specified
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-card">
+                <div class="label">🎂 Date of Birth</div>
+                <div class="value">{{ student.dob or 'Not specified' }}</div>
+            </div>
+            <div class="info-card">
+                <div class="label">🆔 UMIS Number</div>
+                <div class="value">{{ student.umis or 'Not specified' }}</div>
+            </div>
+            <div class="info-card">
+                <div class="label">📱 Student Mobile</div>
+                <div class="value">{{ student.mobile_student or 'Not specified' }}</div>
+            </div>
+            <div class="info-card">
+                <div class="label">📞 Parent Mobile</div>
+                <div class="value">{{ student.mobile_parent or 'Not specified' }}</div>
+            </div>
+            <div class="info-card full-width">
+                <div class="label">👪 Parent/Guardian Name</div>
+                <div class="value">{{ student.parent_guardian_name or 'Not specified' }}</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

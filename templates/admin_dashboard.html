@@ -27,7 +27,6 @@
             overflow: hidden;
         }
 
-        /* Header Section */
         .header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -42,15 +41,6 @@
         .header h1 {
             font-size: 1.5em;
             margin-bottom: 5px;
-        }
-
-        .department-badge {
-            background: rgba(255,255,255,0.2);
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            display: inline-block;
-            margin-top: 5px;
         }
 
         .header-buttons {
@@ -86,7 +76,6 @@
             background: #c82333;
         }
 
-        /* Stats Cards - Mobile Friendly */
         .stats-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -119,7 +108,6 @@
             font-size: 0.85em;
         }
 
-        /* Section Styles */
         .section {
             padding: 20px 24px;
             border-bottom: 1px solid #e0e0e0;
@@ -136,11 +124,6 @@
             justify-content: space-between;
         }
 
-        .section-title h2 {
-            font-size: 1.2em;
-        }
-
-        /* Upload Section */
         .upload-section {
             background: #e8f4f8;
             margin: 0 24px 20px 24px;
@@ -179,7 +162,6 @@
             font-weight: 600;
         }
 
-        /* Years Grid - Mobile Friendly */
         .years-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
@@ -205,7 +187,6 @@
             padding: 15px;
         }
 
-        /* Section Box - Mobile Friendly */
         .section-box {
             background: white;
             border-radius: 12px;
@@ -281,7 +262,6 @@
             color: white;
         }
 
-        /* Add Section Form */
         .add-section-form {
             display: flex;
             gap: 10px;
@@ -308,7 +288,6 @@
             cursor: pointer;
         }
 
-        /* Add Student Section */
         .add-student-section {
             background: #f8f9fa;
             margin: 0 24px 20px 24px;
@@ -318,7 +297,7 @@
 
         .add-student-form {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 12px;
         }
 
@@ -339,7 +318,6 @@
             font-weight: 600;
         }
 
-        /* Report Buttons */
         .report-buttons {
             display: flex;
             gap: 15px;
@@ -368,7 +346,6 @@
             color: white;
         }
 
-        /* Alert Messages */
         .alert {
             padding: 12px 20px;
             margin: 20px 24px;
@@ -382,98 +359,36 @@
             border: 1px solid #c3e6cb;
         }
 
-        /* Mobile Optimizations */
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-
-            .header {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .stats-container {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 10px;
-                padding: 16px;
-            }
-
-            .stat-card {
-                padding: 12px;
-            }
-
-            .stat-card h3 {
-                font-size: 1.5em;
-            }
-
-            .section {
-                padding: 16px;
-            }
-
-            .upload-section, .add-student-section {
-                margin: 0 16px 16px 16px;
-                padding: 16px;
-            }
-
-            .years-grid {
-                grid-template-columns: 1fr;
-                gap: 15px;
-            }
-
-            .section-buttons {
-                flex-direction: column;
-            }
-
-            .section-btn {
-                width: 100%;
-            }
-
-            .report-buttons {
-                flex-direction: column;
-                padding: 16px;
-                gap: 10px;
-            }
-
-            .report-btn {
-                width: 100%;
-            }
-
-            .add-student-form {
-                grid-template-columns: 1fr;
-            }
+            body { padding: 10px; }
+            .header { flex-direction: column; text-align: center; }
+            .stats-container { grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 16px; }
+            .stat-card { padding: 12px; }
+            .stat-card h3 { font-size: 1.5em; }
+            .section { padding: 16px; }
+            .upload-section, .add-student-section { margin: 0 16px 16px 16px; padding: 16px; }
+            .years-grid { grid-template-columns: 1fr; gap: 15px; }
+            .section-buttons { flex-direction: column; }
+            .section-btn { width: 100%; }
+            .report-buttons { flex-direction: column; padding: 16px; gap: 10px; }
+            .report-btn { width: 100%; }
+            .add-student-form { grid-template-columns: 1fr; }
         }
 
         @media (max-width: 480px) {
-            .stats-container {
-                grid-template-columns: 1fr;
-            }
-
-            .upload-form {
-                flex-direction: column;
-            }
-
-            .upload-form select, .upload-form input, .upload-form button {
-                width: 100%;
-            }
-
-            .add-section-form {
-                flex-direction: column;
-            }
-
-            .add-section-form select, .add-section-form button {
-                width: 100%;
-            }
+            .stats-container { grid-template-columns: 1fr; }
+            .upload-form { flex-direction: column; }
+            .upload-form select, .upload-form input, .upload-form button { width: 100%; }
+            .add-section-form { flex-direction: column; }
+            .add-section-form select, .add-section-form button { width: 100%; }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <div class="header">
             <div>
                 <h1>{{ department.name }} Department</h1>
-                <span class="department-badge">Code: {{ department.code }}</span>
             </div>
             <div class="header-buttons">
                 <a href="{{ url_for('ec_types') }}" class="header-btn">🏷️ EC Types</a>
@@ -482,7 +397,6 @@
             </div>
         </div>
 
-        <!-- Alert Messages -->
         {% if session.upload_message %}
         <div class="alert alert-success">
             {{ session.upload_message }}
@@ -497,7 +411,6 @@
         </div>
         {% endif %}
 
-        <!-- Statistics Cards -->
         <div class="stats-container">
             <div class="stat-card">
                 <h3>{{ total_students }}</h3>
@@ -517,7 +430,6 @@
             </div>
         </div>
 
-        <!-- Bulk Upload Section -->
         <div class="upload-section">
             <h3>📤 Bulk Upload Students (Excel/CSV)</h3>
             <form action="{{ url_for('upload_students') }}" method="POST" enctype="multipart/form-data" class="upload-form">
@@ -534,10 +446,9 @@
                 <input type="file" name="file" accept=".xlsx,.xls,.csv" required>
                 <button type="submit">📤 Upload</button>
             </form>
-            <small style="color: #666; display: block; margin-top: 10px;">File must have columns: name, register_number, batch (optional)</small>
+            <small style="color: #666; display: block; margin-top: 10px;">File must have columns: name, register_number, gender, batch, dob, umis, mobile.student, mobile.parent, parents/gardian name, blood group</small>
         </div>
 
-        <!-- Classes Section -->
         <div class="section">
             <div class="section-title">
                 <h2>📚 Classes</h2>
@@ -570,7 +481,6 @@
                             <div style="text-align: center; padding: 20px; color: #999;">No sections added</div>
                         {% endif %}
                         
-                        <!-- Add Section Form -->
                         <div class="add-section-form">
                             <select id="new_section_{{ year }}">
                                 <option value="">+ Add New Section</option>
@@ -586,28 +496,53 @@
             </div>
         </div>
 
-        <!-- Add Single Student -->
         <div class="add-student-section">
             <h3>➕ Add Single Student</h3>
             <form action="{{ url_for('add_student') }}" method="POST" class="add-student-form">
                 <input type="text" name="name" placeholder="Student Name" required>
                 <input type="text" name="register_number" placeholder="Register Number" required>
+                
+                <select name="gender" required>
+                    <option value="">Select Gender</option>
+                    <option value="M">Male (M)</option>
+                    <option value="F">Female (F)</option>
+                </select>
+                
                 <select name="year" required>
                     <option value="1st Year">1st Year</option>
                     <option value="2nd Year">2nd Year</option>
                     <option value="3rd Year">3rd Year</option>
                 </select>
+                
                 <select name="section" required>
                     {% for section in all_sections %}
                     <option value="{{ section.section }}">Section {{ section.section }}</option>
                     {% endfor %}
                 </select>
-                <input type="text" name="batch" placeholder="Batch (e.g., 2022-2025)" required>
+                
+                <input type="text" name="batch" placeholder="Batch (e.g., 2024-2027)" required>
+                <input type="text" name="dob" placeholder="Date of Birth (e.g., 24 July 2007)">
+                <input type="text" name="umis" placeholder="UMIS Number">
+                <input type="tel" name="mobile_student" placeholder="Student Mobile No">
+                <input type="tel" name="mobile_parent" placeholder="Parent Mobile No">
+                <input type="text" name="parent_guardian_name" placeholder="Parent/Guardian Name">
+                
+                <select name="blood_group">
+                    <option value="">Select Blood Group</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                </select>
+                
                 <button type="submit">➕ Add Student</button>
             </form>
         </div>
 
-        <!-- Report Buttons -->
         <div class="report-buttons">
             <a href="{{ url_for('all_ec_activities') }}" class="report-btn report-btn-ec">📋 All EC Activities</a>
             <a href="{{ url_for('od_by_date') }}" class="report-btn report-btn-od">📅 View OD by Date</a>
@@ -626,51 +561,30 @@
             
             fetch('/add_section', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    year: year,
-                    section: section
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ year: year, section: section })
             })
             .then(response => response.json())
             .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + data.error);
-                }
+                if (data.success) { location.reload(); }
+                else { alert('Error: ' + data.error); }
             })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to add section');
-            });
+            .catch(error => { console.error('Error:', error); alert('Failed to add section'); });
         }
         
         function deleteSection(sectionId, year, section) {
             if (confirm('Delete Section ' + section + ' from ' + year + '?\n\nThis will NOT delete students, but they will need to be reassigned.')) {
                 fetch('/delete_section', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        section_id: sectionId
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ section_id: sectionId })
                 })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('Error: ' + data.error);
-                    }
+                    if (data.success) { location.reload(); }
+                    else { alert('Error: ' + data.error); }
                 })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Failed to delete section');
-                });
+                .catch(error => { console.error('Error:', error); alert('Failed to delete section'); });
             }
         }
     </script>

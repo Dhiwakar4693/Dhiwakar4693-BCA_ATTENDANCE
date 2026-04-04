@@ -28,7 +28,6 @@
             position: relative;
         }
 
-        /* Small Change Password Button - Top Right */
         .change-password-btn {
             position: absolute;
             top: 20px;
@@ -78,7 +77,6 @@
             transform: translateY(-2px);
         }
 
-        /* Compact Menu Cards */
         .menu-row {
             display: flex;
             gap: 15px;
@@ -139,7 +137,6 @@
             background: #e67e22;
         }
 
-        /* Department Section */
         .department-section {
             margin-top: 25px;
             padding-top: 20px;
@@ -179,12 +176,6 @@
             font-size: 1em;
         }
 
-        .department-code {
-            font-size: 0.7em;
-            opacity: 0.8;
-            margin-top: 3px;
-        }
-
         .no-departments {
             text-align: center;
             padding: 20px;
@@ -193,7 +184,6 @@
             border-radius: 10px;
         }
 
-        /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
@@ -300,7 +290,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Small Change Password Button - Top Right -->
         <button class="change-password-btn" onclick="showChangePasswordModal()">🔐 Change Password</button>
 
         <div class="header">
@@ -320,7 +309,6 @@
         </div>
         {% endif %}
 
-        <!-- Compact Menu Cards -->
         <div class="menu-row">
             <div class="menu-card">
                 <div class="menu-title">➕ Add Department</div>
@@ -334,7 +322,6 @@
             </div>
         </div>
 
-        <!-- Department Section -->
         <div class="department-section">
             <h3>📋 Select Department to Manage</h3>
             <div class="department-grid" id="departmentGrid">
@@ -342,7 +329,6 @@
                     {% for dept in departments %}
                     <div class="department-card" onclick="openDepartmentDashboard('{{ dept.id }}')">
                         <div class="department-name">{{ dept.name }}</div>
-                        <div class="department-code">{{ dept.code }}</div>
                     </div>
                     {% endfor %}
                 {% else %}
@@ -354,7 +340,6 @@
         </div>
     </div>
 
-    <!-- Change Password Modal -->
     <div id="passwordModal" class="modal">
         <div class="modal-content">
             <h3>Change Admin Password</h3>
@@ -432,12 +417,9 @@
         }
 
         function openDepartmentDashboard(departmentId) {
-            // Clear any existing session data for clean access
-            // Use window.location.href to navigate to admin dashboard with department ID
             window.location.href = "/admin_dashboard?dept_id=" + departmentId;
         }
 
-        // Close modal when clicking outside
         window.onclick = function(event) {
             const modal = document.getElementById('passwordModal');
             if (event.target == modal) {

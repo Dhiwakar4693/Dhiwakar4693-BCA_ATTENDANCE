@@ -134,6 +134,16 @@
             font-size: 1em;
         }
 
+        .gender-male {
+            color: #007bff;
+            font-weight: bold;
+        }
+
+        .gender-female {
+            color: #dc3545;
+            font-weight: bold;
+        }
+
         .ec-activities {
             display: flex;
             flex-wrap: wrap;
@@ -220,7 +230,6 @@
             text-align: center;
         }
 
-        /* IMPROVED DROPDOWN - Fixed positioning */
         .dropdown {
             position: relative;
             display: inline-block;
@@ -246,7 +255,7 @@
             display: none;
             position: fixed;
             background-color: white;
-            min-width: 160px;
+            min-width: 180px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
             z-index: 1000;
             border-radius: 8px;
@@ -354,7 +363,6 @@
             color: white;
         }
 
-        /* Action button styles */
         .action-buttons {
             display: flex;
             gap: 8px;
@@ -375,6 +383,17 @@
         .action-icon:hover {
             background: #f0f0f0;
             transform: scale(1.05);
+        }
+
+        .group-header-male {
+            background: #d4edda;
+        }
+        .group-header-female {
+            background: #f8d7da;
+        }
+        .group-header-male td, .group-header-female td {
+            font-weight: bold;
+            padding: 10px;
         }
 
         @media (max-width: 768px) {
@@ -404,6 +423,13 @@
             .action-buttons {
                 flex-direction: column;
                 gap: 4px;
+            }
+            .dropdown-content {
+                min-width: 160px;
+            }
+            .dropdown-content a {
+                padding: 8px 12px;
+                font-size: 0.75em;
             }
         }
     </style>
@@ -453,6 +479,7 @@
                         <th>S.No</th>
                         <th>Register No</th>
                         <th>Student Name & Activities</th>
+                        <th>Gender</th>
                         <th>Batch</th>
                         <th>Total Days</th>
                         <th>Total Periods</th>
@@ -464,10 +491,20 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for student in students %}
+                    {% set male_students = students|selectattr('gender', 'equalto', 'M')|list %}
+                    {% set female_students = students|selectattr('gender', 'equalto', 'F')|list %}
+                    {% set sno = namespace(value=1) %}
+                    
+                    {% if male_students %}
+                    <tr class="group-header-male">
+                        <td colspan="12" style="background: #d4edda; color: #155724; font-weight: bold;">
+                            👨 MALE STUDENTS ({{ male_students|length }})
+                        </td>
+                    </tr>
+                    {% for student in male_students %}
                     <tr id="student-row-{{ student.id }}">
-                        <td>{{ loop.index }}</div>
-                        <td>{{ student.reg_no }}</div>
+                        <td>{{ sno.value }}{% set sno.value = sno.value + 1 %}</td>
+                        <td>{{ student.reg_no }}</td>
                         <td class="student-name">
                             <div class="student-info-cell">
                                 <div class="student-header">{{ student.name }}</div>
@@ -487,15 +524,18 @@
                                 {% endif %}
                                 <a href="{{ url_for('ec_activity', student_id=student.id, year=year, section=section) }}" class="ec-btn">➕ Add EC Activity</a>
                             </div>
-                        </div>
-                        <td>{{ student.batch }}</div>
-                        <td>{{ student.total_days }}</div>
-                        <td>{{ student.total_periods }}</div>
-                        <td class="present">{{ student.present_periods }}</div>
-                        <td class="absent">{{ student.absent_periods }}</div>
+                        </td>
+                        <td>
+                            <span class="gender-male">👨 Male</span>
+                        </td>
+                        <td>{{ student.batch }}</td>
+                        <td>{{ student.total_days }}</td>
+                        <td>{{ student.total_periods }}</td>
+                        <td class="present">{{ student.present_periods }}</td>
+                        <td class="absent">{{ student.absent_periods }}</td>
                         <td class="percentage-cell {% if student.percentage >= 75 %}high{% elif student.percentage >= 40 %}medium{% else %}low{% endif %}">
                             <strong>{{ student.percentage }}%</strong>
-                        </div>
+                        </td>
                         <td>
                             {% if student.percentage >= 75 %}
                             <span style="color: #28a745;">✅ Good</span>
@@ -504,28 +544,88 @@
                             {% else %}
                             <span style="color: #dc3545;">❌ Low</span>
                             {% endif %}
-                        </div>
+                        </td>
                         <td>
                             <div class="action-buttons">
                                 <button class="action-icon" onclick="showActionMenu(this, '{{ student.id }}', '{{ student.name }}', '{{ year }}', '{{ section }}')" title="Actions">⚙️</button>
                             </div>
-                        </div>
+                        </td>
                     </tr>
                     {% endfor %}
+                    {% endif %}
+                    
+                    {% if female_students %}
+                    <tr class="group-header-female">
+                        <td colspan="12" style="background: #f8d7da; color: #721c24; font-weight: bold;">
+                            👩 FEMALE STUDENTS ({{ female_students|length }})
+                        </td>
+                    </tr>
+                    {% for student in female_students %}
+                    <tr id="student-row-{{ student.id }}">
+                        <td>{{ sno.value }}{% set sno.value = sno.value + 1 %}</td>
+                        <td>{{ student.reg_no }}</td>
+                        <td class="student-name">
+                            <div class="student-info-cell">
+                                <div class="student-header">{{ student.name }}</div>
+                                {% if student.ec_activities|length > 0 %}
+                                <div class="ec-activities">
+                                    {% for activity in student.ec_activities %}
+                                    <span class="ec-badge">
+                                        {% if activity.notes %}
+                                            {{ activity.notes }}
+                                        {% else %}
+                                            {{ activity.name }}
+                                        {% endif %}
+                                        <button type="button" class="delete-ec" data-activity-id="{{ activity.id }}" data-student-id="{{ student.id }}" data-activity-name="{{ activity.notes if activity.notes else activity.name }}">✗</button>
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                <a href="{{ url_for('ec_activity', student_id=student.id, year=year, section=section) }}" class="ec-btn">➕ Add EC Activity</a>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="gender-female">👩 Female</span>
+                        </td>
+                        <td>{{ student.batch }}</td>
+                        <td>{{ student.total_days }}</td>
+                        <td>{{ student.total_periods }}</td>
+                        <td class="present">{{ student.present_periods }}</td>
+                        <td class="absent">{{ student.absent_periods }}</td>
+                        <td class="percentage-cell {% if student.percentage >= 75 %}high{% elif student.percentage >= 40 %}medium{% else %}low{% endif %}">
+                            <strong>{{ student.percentage }}%</strong>
+                        </td>
+                        <td>
+                            {% if student.percentage >= 75 %}
+                            <span style="color: #28a745;">✅ Good</span>
+                            {% elif student.percentage >= 40 %}
+                            <span style="color: #ffc107;">⚠️ Average</span>
+                            {% else %}
+                            <span style="color: #dc3545;">❌ Low</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-icon" onclick="showActionMenu(this, '{{ student.id }}', '{{ student.name }}', '{{ year }}', '{{ section }}')" title="Actions">⚙️</button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% endif %}
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Floating Action Menu (replaces dropdown) -->
     <div id="actionMenu" class="dropdown-content" style="display: none;">
-        <a href="#" id="actionDetails">📋 View Details</a>
+        <a href="#" id="actionFullDetails">📋 Complete Details</a>
+        <a href="#" id="actionDetails">📊 Attendance Details</a>
+        <a href="#" id="actionEditRegNo">✏️ Edit Register Number</a>
         <a href="#" id="actionAddDate">📅 Add Date Attendance</a>
         <a href="#" id="actionAddPrevious">📜 Add Previous Attendance</a>
         <a href="#" id="actionDeleteStudent">🗑️ Delete Student</a>
     </div>
 
-    <!-- Delete EC Activity Confirmation Popup -->
     <div id="popupOverlay" class="popup-overlay"></div>
     <div id="deletePopup" class="popup-container">
         <h3>Delete EC Activity</h3>
@@ -543,7 +643,6 @@
         let currentActionYear = null;
         let currentActionSection = null;
 
-        // Floating Action Menu
         const actionMenu = document.getElementById('actionMenu');
         
         function showActionMenu(button, studentId, studentName, year, section) {
@@ -551,16 +650,13 @@
             currentActionYear = year;
             currentActionSection = section;
             
-            // Get button position
             const rect = button.getBoundingClientRect();
             
-            // Position the menu near the button
             actionMenu.style.display = 'block';
             actionMenu.style.position = 'fixed';
             actionMenu.style.top = (rect.bottom + 5) + 'px';
             actionMenu.style.left = (rect.left - 100) + 'px';
             
-            // Adjust if off screen
             const menuRect = actionMenu.getBoundingClientRect();
             if (menuRect.right > window.innerWidth) {
                 actionMenu.style.left = (window.innerWidth - menuRect.width - 10) + 'px';
@@ -569,8 +665,9 @@
                 actionMenu.style.top = (rect.top - menuRect.height - 5) + 'px';
             }
             
-            // Set up action links
+            document.getElementById('actionFullDetails').href = `/student_details/${studentId}`;
             document.getElementById('actionDetails').href = `/student_attendance_details/${studentId}/${year}/${section}`;
+            document.getElementById('actionEditRegNo').href = `/edit_register_number/${studentId}`;
             document.getElementById('actionAddDate').href = `/add_new_date_attendance/${studentId}/${year}/${section}`;
             document.getElementById('actionAddPrevious').href = `/add_previous_attendance/${studentId}`;
             document.getElementById('actionDeleteStudent').onclick = function(e) {
@@ -582,14 +679,12 @@
             };
         }
         
-        // Close menu when clicking outside
         document.addEventListener('click', function(event) {
             if (!event.target.closest('.action-icon') && !event.target.closest('#actionMenu')) {
                 actionMenu.style.display = 'none';
             }
         });
 
-        // Handle EC Activity Delete
         document.querySelectorAll('.delete-ec').forEach(function(button) {
             button.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -613,9 +708,7 @@
             if (deleteActivityId) {
                 fetch('/delete_student_ec', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         activity_id: deleteActivityId,
                         student_id: deleteStudentIdForEC
@@ -638,15 +731,13 @@
             }
         }
 
-        // Close popup when clicking on overlay
-        var overlay = document.getElementById('popupOverlay');
+        const overlay = document.getElementById('popupOverlay');
         if (overlay) {
             overlay.addEventListener('click', function() {
                 closeDeletePopup();
             });
         }
 
-        // Close popup with Escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeDeletePopup();

@@ -33,7 +33,6 @@
             z-index: 1;
         }
 
-        /* Logo Section */
         .logo-section {
             text-align: center;
             margin-bottom: 20px;
@@ -322,7 +321,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Logo Section -->
         <div class="logo-section">
             <img src="{{ url_for('static', filename='image/zhgm990j_.png') }}" alt="Jaya College of Arts & Science" class="college-logo" onerror="this.style.display='none'">
             <div class="system-title">🎓 Attendance Management System</div>
@@ -351,7 +349,7 @@
                             <select name="department_id" required>
                                 <option value="">Select Department</option>
                                 {% for dept in departments %}
-                                <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.code }})</option>
+                                <option value="{{ dept.id }}">{{ dept.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -379,7 +377,7 @@
                             <select name="department_id" required>
                                 <option value="">Select Department</option>
                                 {% for dept in departments %}
-                                <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.code }})</option>
+                                <option value="{{ dept.id }}">{{ dept.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -440,7 +438,7 @@
                             <select name="department_id" required>
                                 <option value="">Select Department</option>
                                 {% for dept in departments %}
-                                <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.code }})</option>
+                                <option value="{{ dept.id }}">{{ dept.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -593,7 +591,6 @@
             });
         });
 
-        // Close modal when clicking outside
         window.onclick = function(event) {
             const modal = document.getElementById('headPasswordModal');
             if (event.target == modal) {
@@ -601,7 +598,6 @@
             }
         }
 
-        // Close modal with Escape key
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
                 const modal = document.getElementById('headPasswordModal');

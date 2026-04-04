@@ -5,43 +5,330 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Attendance Report - {{ year }} Section {{ section }}</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #f0f0f0; padding: 16px; }
-        .print-container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.1); }
-        .header { text-align: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #333; }
-        .header h1 { font-size: 1.5em; }
-        .header h2 { font-size: 1.2em; color: #667eea; }
-        .stats-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0; }
-        .stat-box { background: #f8f9fa; padding: 12px; border-radius: 8px; text-align: center; border: 1px solid #e0e0e0; }
-        .stat-box .number { font-size: 1.5em; font-weight: bold; color: #667eea; }
-        table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-        th { background: #667eea; color: white; padding: 8px; text-align: center; font-size: 0.75em; border: 1px solid #5a67d8; }
-        td { padding: 6px; text-align: center; border: 1px solid #ddd; font-size: 0.7em; }
-        .student-name { text-align: left; }
-        .signatures { display: flex; justify-content: space-between; margin-top: 30px; padding-top: 15px; flex-wrap: wrap; gap: 15px; }
-        .signature-line { text-align: center; width: 150px; }
-        .signature-line .line { border-top: 1px solid #333; margin-top: 30px; padding-top: 5px; }
-        .footer { margin-top: 20px; padding-top: 12px; border-top: 1px solid #ddd; text-align: center; font-size: 0.6em; }
-        .btn-print, .btn-back { display: inline-block; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; font-size: 0.8em; margin-right: 8px; margin-bottom: 16px; text-decoration: none; }
-        .btn-print { background: #28a745; color: white; }
-        .btn-back { background: #6c757d; color: white; }
-        @media print { body { background: white; padding: 0; } .print-container { box-shadow: none; padding: 15px; } .no-print { display: none; } th { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        }
+        body { 
+            background: #f0f0f0; 
+            padding: 16px; 
+        }
+        .print-container { 
+            max-width: 1200px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 20px; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.1); 
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 20px; 
+            padding-bottom: 15px; 
+            border-bottom: 2px solid #333; 
+        }
+        .header h1 { 
+            font-size: 1.5em; 
+        }
+        .header h2 { 
+            font-size: 1.2em; 
+            color: #667eea; 
+        }
+        .college-name {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .college-address {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .stats-summary { 
+            display: grid; 
+            grid-template-columns: repeat(5, 1fr); 
+            gap: 12px; 
+            margin: 16px 0; 
+        }
+        .stat-box { 
+            background: #f8f9fa; 
+            padding: 12px; 
+            border-radius: 8px; 
+            text-align: center; 
+            border: 1px solid #e0e0e0; 
+        }
+        .stat-box .number { 
+            font-size: 1.5em; 
+            font-weight: bold; 
+            color: #667eea; 
+        }
+        .stat-box .label {
+            font-size: 0.7em;
+            color: #666;
+            margin-top: 5px;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 16px; 
+        }
+        th { 
+            background: #667eea; 
+            color: white; 
+            padding: 10px; 
+            text-align: center; 
+            font-size: 0.75em; 
+            border: 1px solid #5a67d8; 
+        }
+        td { 
+            padding: 8px; 
+            text-align: center; 
+            border: 1px solid #ddd; 
+            font-size: 0.7em; 
+        }
+        .student-name { 
+            text-align: left; 
+        }
+        .group-header-male {
+            background: #d4edda;
+            font-weight: bold;
+        }
+        .group-header-female {
+            background: #f8d7da;
+            font-weight: bold;
+        }
+        .group-header-male td, .group-header-female td {
+            background: inherit;
+            font-weight: bold;
+            text-align: left;
+            padding: 8px 12px;
+        }
+        .signatures { 
+            display: flex; 
+            justify-content: space-between; 
+            margin-top: 30px; 
+            padding-top: 15px; 
+            flex-wrap: wrap; 
+            gap: 15px; 
+        }
+        .signature-line { 
+            text-align: center; 
+            width: 150px; 
+        }
+        .signature-line .line { 
+            border-top: 1px solid #333; 
+            margin-top: 30px; 
+            padding-top: 5px; 
+        }
+        .footer { 
+            margin-top: 20px; 
+            padding-top: 12px; 
+            border-top: 1px solid #ddd; 
+            text-align: center; 
+            font-size: 0.6em; 
+        }
+        .btn-print, .btn-back { 
+            display: inline-block; 
+            padding: 8px 16px; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 0.8em; 
+            margin-right: 8px; 
+            margin-bottom: 16px; 
+            text-decoration: none; 
+        }
+        .btn-print { 
+            background: #28a745; 
+            color: white; 
+        }
+        .btn-back { 
+            background: #6c757d; 
+            color: white; 
+        }
+        .gender-badge-male {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 15px;
+            font-size: 0.7em;
+        }
+        .gender-badge-female {
+            display: inline-block;
+            background: #dc3545;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 15px;
+            font-size: 0.7em;
+        }
+        @media print { 
+            body { 
+                background: white; 
+                padding: 0; 
+            } 
+            .print-container { 
+                box-shadow: none; 
+                padding: 15px; 
+            } 
+            .no-print { 
+                display: none; 
+            } 
+            th { 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact; 
+            } 
+            .group-header-male td, .group-header-female td {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
         @media (min-width: 768px) {
-            .print-container { padding: 30px; }
-            .header h1 { font-size: 2em; }
-            .stat-box .number { font-size: 2em; }
-            th { padding: 12px; font-size: 0.9em; }
-            td { padding: 10px; font-size: 0.85em; }
+            .print-container { 
+                padding: 30px; 
+            }
+            .header h1 { 
+                font-size: 2em; 
+            }
+            .stat-box .number { 
+                font-size: 2em; 
+            }
+            th { 
+                padding: 12px; 
+                font-size: 0.9em; 
+            }
+            td { 
+                padding: 10px; 
+                font-size: 0.85em; 
+            }
+        }
+        @media (max-width: 768px) {
+            .stats-summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .signatures {
+                flex-direction: column;
+                align-items: center;
+            }
+            .signature-line {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="print-container">
-        <div class="no-print" style="text-align:right; margin-bottom:16px;"><button onclick="window.print()" class="btn-print">🖨️ Print / PDF</button><a href="{{ url_for('admin_dashboard') }}" class="btn-back">← Back</a></div>
-        <div class="header"><h1>🎓 BCA Department</h1><h2>Student List - {{ year }} Section {{ section }}</h2><div class="info"><span>📅 Generated: {{ print_date }}</span> | <span>👥 Total: {{ students|length }}</span></div></div>
-        <div class="stats-summary"><div class="stat-box"><div class="number">{{ students|length }}</div><div>Total Students</div></div><div class="stat-box"><div class="number">{{ year }}</div><div>Academic Year</div></div><div class="stat-box"><div class="number">{{ section }}</div><div>Section</div></div></div>
-        <table><thead><tr><th>S.No</th><th>Register No</th><th>Student Name</th><th>Batch</th></tr></thead><tbody>{% for student in students %}<tr><td>{{ loop.index }}</td><td>{{ student.reg_no }}</td><td class="student-name">{{ student.name }}</td><td>{{ student.batch }}</td></tr>{% endfor %}</tbody></table>
-        <div class="signatures"><div class="signature-line"><div class="line"></div><div>Class Teacher</div></div><div class="signature-line"><div class="line"></div><div>HOD Signature</div></div><div class="signature-line"><div class="line"></div><div>Principal Signature</div></div></div>
+        <div class="no-print" style="text-align:right; margin-bottom:16px;">
+            <button onclick="window.print()" class="btn-print">🖨️ Print / PDF</button>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn-back">← Back</a>
+        </div>
+        
+        <div class="header">
+            <div class="college-name">🎓 Jaya College of Arts & Science</div>
+            <div class="college-address">Thirunindravur, Chennai - 602024</div>
+            <h2>Student Attendance Report</h2>
+            <div class="info">
+                <p>{{ year }} - Section {{ section }}</p>
+                <p>📅 Generated: {{ print_date }}</p>
+            </div>
+        </div>
+        
+        <div class="stats-summary">
+            <div class="stat-box">
+                <div class="number">{{ students|length }}</div>
+                <div class="label">Total Students</div>
+            </div>
+            <div class="stat-box">
+                <div class="number">{{ students|selectattr('gender', 'equalto', 'M')|list|length }}</div>
+                <div class="label">👨 Male Students</div>
+            </div>
+            <div class="stat-box">
+                <div class="number">{{ students|selectattr('gender', 'equalto', 'F')|list|length }}</div>
+                <div class="label">👩 Female Students</div>
+            </div>
+            <div class="stat-box">
+                <div class="number">{{ year }}</div>
+                <div class="label">Academic Year</div>
+            </div>
+            <div class="stat-box">
+                <div class="number">Section {{ section }}</div>
+                <div class="label">Section</div>
+            </div>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>Register No</th>
+                    <th>Student Name</th>
+                    <th>Gender</th>
+                    <th>Batch</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% set male_students = students|selectattr('gender', 'equalto', 'M')|list %}
+                {% set female_students = students|selectattr('gender', 'equalto', 'F')|list %}
+                {% set sno = namespace(value=1) %}
+                
+                <!-- MALE STUDENTS SECTION -->
+                {% if male_students %}
+                <tr class="group-header-male">
+                    <td colspan="5" style="background: #d4edda; color: #155724;">
+                        👨 MALE STUDENTS ({{ male_students|length }})
+                    </td>
+                </tr>
+                {% for student in male_students %}
+                <tr>
+                    <td>{{ sno.value }}{% set sno.value = sno.value + 1 %}</td>
+                    <td>{{ student.reg_no }}</td>
+                    <td class="student-name">{{ student.name }}</td>
+                    <td><span class="gender-badge-male">Male</span></td>
+                    <td>{{ student.batch }}</td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+                
+                <!-- FEMALE STUDENTS SECTION -->
+                {% if female_students %}
+                <tr class="group-header-female">
+                    <td colspan="5" style="background: #f8d7da; color: #721c24;">
+                        👩 FEMALE STUDENTS ({{ female_students|length }})
+                    </td>
+                </tr>
+                {% for student in female_students %}
+                <tr>
+                    <td>{{ sno.value }}{% set sno.value = sno.value + 1 %}</td>
+                    <td>{{ student.reg_no }}</td>
+                    <td class="student-name">{{ student.name }}</td>
+                    <td><span class="gender-badge-female">Female</span></td>
+                    <td>{{ student.batch }}</td>
+                </tr>
+                {% endfor %}
+                {% endif %}
+            </tbody>
+        </table>
+        
+        <div class="signatures">
+            <div class="signature-line">
+                <div class="line"></div>
+                <div>Class Teacher</div>
+            </div>
+            <div class="signature-line">
+                <div class="line"></div>
+                <div>HOD Signature</div>
+            </div>
+            <div class="signature-line">
+                <div class="line"></div>
+                <div>Principal Signature</div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>© Jaya College of Arts & Science - Attendance Management System</p>
+        </div>
     </div>
 </body>
 </html>
