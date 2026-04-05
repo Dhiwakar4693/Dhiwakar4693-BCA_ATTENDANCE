@@ -181,6 +181,12 @@
             color: #333;
         }
 
+        .upload-section p {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
         .upload-form {
             display: flex;
             gap: 15px;
@@ -196,7 +202,7 @@
         .upload-form .form-group label {
             display: block;
             margin-bottom: 5px;
-            font-size: 0.9em;
+            font-size: 0.85em;
             color: #555;
         }
 
@@ -348,22 +354,10 @@
         {% endif %}
 
         <div class="stats-container">
-            <div class="stat-card">
-                <h3>{{ total_students }}</h3>
-                <p>Total Students</p>
-            </div>
-            <div class="stat-card">
-                <h3>{{ total_staff }}</h3>
-                <p>Total Staff</p>
-            </div>
-            <div class="stat-card">
-                <h3>9</h3>
-                <p>Total Sections</p>
-            </div>
-            <div class="stat-card">
-                <h3>3</h3>
-                <p>Total Years</p>
-            </div>
+            <div class="stat-card"><h3>{{ total_students }}</h3><p>Total Students</p></div>
+            <div class="stat-card"><h3>{{ total_staff }}</h3><p>Total Staff</p></div>
+            <div class="stat-card"><h3>9</h3><p>Total Sections</p></div>
+            <div class="stat-card"><h3>3</h3><p>Total Years</p></div>
         </div>
 
         <div class="upload-section">
@@ -411,6 +405,7 @@
                         <div class="btn-group">
                             <a href="{{ url_for('view_class', year=year, section=section) }}" class="view-btn">📋 View</a>
                             <a href="{{ url_for('print_attendance', year=year, section=section) }}" class="print-btn">🖨️ Print</a>
+                            <a href="{{ url_for('monthly_attendance', year=year, section=section) }}" class="btn btn-primary" style="background: #17a2b8;">📅 Monthly View</a>
                         </div>
                     </div>
                     {% endfor %}
@@ -423,34 +418,11 @@
             <div class="add-section">
                 <h3>➕ Add Student</h3>
                 <form action="{{ url_for('add_student') }}" method="POST">
-                    <div class="form-group">
-                        <label>Student Name:</label>
-                        <input type="text" name="name" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Register Number:</label>
-                        <input type="text" name="register_number" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Year:</label>
-                        <select name="year" required>
-                            <option value="1st Year">1st Year</option>
-                            <option value="2nd Year">2nd Year</option>
-                            <option value="3rd Year">3rd Year</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Section:</label>
-                        <select name="section" required>
-                            <option value="A">A</option>
-                            <option value="B">B</option>
-                            <option value="C">C</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Batch:</label>
-                        <input type="text" name="batch" required>
-                    </div>
+                    <div class="form-group"><label>Student Name:</label><input type="text" name="name" required></div>
+                    <div class="form-group"><label>Register Number:</label><input type="text" name="register_number" required></div>
+                    <div class="form-group"><label>Year:</label><select name="year"><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option></select></div>
+                    <div class="form-group"><label>Section:</label><select name="section"><option value="A">A</option><option value="B">B</option><option value="C">C</option></select></div>
+                    <div class="form-group"><label>Batch:</label><input type="text" name="batch" required></div>
                     <button type="submit" class="btn btn-success">Add Student</button>
                 </form>
             </div>
@@ -458,18 +430,9 @@
             <div class="add-section">
                 <h3>👤 Add Staff</h3>
                 <form action="{{ url_for('add_staff') }}" method="POST">
-                    <div class="form-group">
-                        <label>Staff Name:</label>
-                        <input type="text" name="name" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Password:</label>
-                        <input type="text" name="password" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Subject:</label>
-                        <input type="text" name="subject" required>
-                    </div>
+                    <div class="form-group"><label>Staff Name:</label><input type="text" name="name" required></div>
+                    <div class="form-group"><label>Password:</label><input type="text" name="password" required></div>
+                    <div class="form-group"><label>Subject:</label><input type="text" name="subject" required></div>
                     <button type="submit" class="btn btn-success">Add Staff</button>
                 </form>
             </div>
