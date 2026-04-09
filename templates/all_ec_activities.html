@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>All EC Activities</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 1.8em;
+        }
+
+        .filter-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .filter-btn {
+            background: #e9ecef;
+            color: #333;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .filter-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .year-section {
+            margin-bottom: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .year-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f9fa;
+            color: #333;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .activity-badge {
+            display: inline-block;
+            background: #ffc107;
+            color: #333;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .back-btn {
+            background: #6c757d;
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .stats {
+            background: #e8f4f8;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #0066cc;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            th, td {
+                padding: 8px;
+                font-size: 0.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>All EC Activities</h1>
+            <a href="{{ url_for('admin_dashboard') }}" class="back-btn">Back to Dashboard</a>
+        </div>
+
+        <div class="filter-section">
+            <h3>Filter by Activity Type</h3>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">All Activities</button>
+                {% for type in activity_types %}
+                <button class="filter-btn" data-filter="{{ type.name }}">{{ type.name }}</button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="stats" id="stats">
+            Loading...
+        </div>
+
+        <div id="activities-container">
+            {% for key, data in grouped_data.items() %}
+            <div class="year-section" data-year="{{ data.year }}" data-section="{{ data.section }}">
+                <div class="year-header">
+                    {{ key }} | Batch: {{ data.activities[0].batch if data.activities else 'N/A' }}
+                </div>
+                <div class="table-wrapper">
+                    <table class="activity-table">
+                        <thead>
+                            <tr>
+                                <th>Register No</th>
+                                <th>Student Name</th>
+                                <th>Activity Type</th>
+                                <th>Activity Name</th>
+                                <th>Date</th>
+                            </thead>
+                        </thead>
+                        <tbody>
+                            {% for activity in data.activities %}
+                            <tr data-activity-type="{{ activity.activity_type }}">
+                                <td>{{ activity.register_number }}</div>
+                                <td>{{ activity.student_name }}</div>
+                                <td><span class="activity-badge">{{ activity.activity_type }}</span></div>
+                                <td>{{ activity.activity_name }}</div>
+                                <td>{{ activity.activity_date.strftime('%d-%m-%Y') }}</div>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        {% if not grouped_data %}
+        <div class="no-data">
+            No EC activities found.
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        // Filter functionality
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const allRows = document.querySelectorAll('.activity-table tbody tr');
+        const yearSections = document.querySelectorAll('.year-section');
+        
+        function updateStats() {
+            let visibleRows = 0;
+            document.querySelectorAll('.activity-table tbody tr').forEach(row => {
+                if (row.style.display !== 'none') {
+                    visibleRows++;
+                }
+            });
+            
+            const statsDiv = document.getElementById('stats');
+            if (visibleRows === 0) {
+                statsDiv.innerHTML = 'No activities found for selected filter.';
+            } else {
+                statsDiv.innerHTML = `Showing ${visibleRows} EC activities across all sections.`;
+            }
+        }
+        
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Update active state
+                filterBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const filterValue = this.getAttribute('data-filter');
+                
+                // Filter rows
+                allRows.forEach(row => {
+                    const activityType = row.getAttribute('data-activity-type');
+                    if (filterValue === 'all' || activityType === filterValue) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                
+                // Hide empty year sections
+                yearSections.forEach(section => {
+                    const visibleRowsInSection = section.querySelectorAll('.activity-table tbody tr:not([style*="display: none"])').length;
+                    if (visibleRowsInSection === 0) {
+                        section.style.display = 'none';
+                    } else {
+                        section.style.display = '';
+                    }
+                });
+                
+                updateStats();
+            });
+        });
+        
+        // Initial stats
+        updateStats();
+    </script>
+</body>
+</html>

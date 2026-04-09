@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Manage EC Activity Types</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #28a745;
+            color: white;
+            width: 100%;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 4px 10px;
+            font-size: 0.75em;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+        }
+
+        .activity-list {
+            margin-top: 20px;
+        }
+
+        .activity-item {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .activity-name {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .activity-desc {
+            font-size: 0.7em;
+            color: #888;
+            margin-top: 3px;
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>EC Activity Types</h1>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+        </div>
+
+        {% if session.ec_message %}
+        <div class="alert alert-success">
+            {{ session.ec_message }}
+            {% set _ = session.pop('ec_message', None) %}
+        </div>
+        {% endif %}
+
+        <div class="form-section">
+            <h3>Add New EC Activity Type</h3>
+            <form method="POST">
+                <div class="form-group">
+                    <label>Activity Name</label>
+                    <input type="text" name="activity_name" placeholder="e.g., Sports, Cultural, Workshop, Seminar" required>
+                </div>
+                <div class="form-group">
+                    <label>Description (Optional)</label>
+                    <input type="text" name="description" placeholder="Brief description">
+                </div>
+                <button type="submit" class="btn btn-primary">Add Activity Type</button>
+            </form>
+        </div>
+
+        <div class="activity-list">
+            <h3>Existing EC Activity Types</h3>
+            {% if activities %}
+                {% for activity in activities %}
+                <div class="activity-item">
+                    <div>
+                        <div class="activity-name">{{ activity.name }}</div>
+                        {% if activity.description %}
+                        <div class="activity-desc">{{ activity.description }}</div>
+                        {% endif %}
+                    </div>
+                    <a href="{{ url_for('delete_activity_type', activity_id=activity.id) }}" class="btn btn-danger" onclick="return confirm('Delete activity type {{ activity.name }}? This will affect all associated records.')">Delete</a>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p style="text-align: center; color: #999; padding: 20px;">No EC activity types added yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>

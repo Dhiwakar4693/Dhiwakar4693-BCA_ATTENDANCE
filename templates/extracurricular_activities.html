@@ -46,6 +46,25 @@
             margin-bottom: 25px;
         }
 
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
         .form-section {
             background: #f8f9fa;
             padding: 20px;
@@ -69,7 +88,7 @@
             font-weight: 500;
         }
 
-        .form-group input {
+        .form-group input, .form-group select {
             width: 100%;
             padding: 10px;
             border: 2px solid #e0e0e0;
@@ -99,61 +118,22 @@
             display: inline-block;
         }
 
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-            padding: 4px 10px;
-            font-size: 0.75em;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn-primary:hover, .btn-secondary:hover, .btn-danger:hover {
+        .btn-primary:hover, .btn-secondary:hover {
             transform: translateY(-2px);
         }
 
-        .activities-list {
-            margin-top: 25px;
-        }
-
-        .activity-card {
-            background: #f8f9fa;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .activity-name {
-            font-weight: bold;
-            color: #333;
-            font-size: 1em;
-        }
-
-        .alert {
+        .info-note {
+            background: #e8f4f8;
             padding: 12px;
             border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
+            margin-top: 20px;
+            font-size: 0.85em;
+            color: #0066cc;
         }
 
         @media (max-width: 768px) {
             .container {
                 padding: 20px;
-            }
-            .activity-card {
-                flex-direction: column;
-                text-align: center;
             }
         }
     </style>
@@ -162,12 +142,15 @@
     <div class="container">
         <div class="header">
             <h1>Extracurricular Activities</h1>
-            <a href="{{ url_for('view_class', year=year, section=section) }}" class="btn btn-secondary">Back to Class</a>
+            <a href="{{ url_for('staff_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
         </div>
 
         <div class="student-info">
             <h2>{{ student.name }}</h2>
             <p>Register No: {{ student.register_number }} | {{ year }} - Section {{ section }}</p>
+            {% if period and date %}
+            <p style="margin-top: 10px;">Marking OD for: Period {{ period }} on {{ date }}</p>
+            {% endif %}
         </div>
 
         {% if session.activity_message %}
@@ -177,29 +160,30 @@
         </div>
         {% endif %}
 
+        {% if session.attendance_marked %}
+        <div class="alert alert-success">
+            {{ session.attendance_marked }}
+            {% set _ = session.pop('attendance_marked', None) %}
+        </div>
+        {% endif %}
+
         <div class="form-section">
-            <h3>Add Extracurricular Activity</h3>
+            <h3>Add OD Activity</h3>
             <form method="POST">
                 <div class="form-group">
                     <label>Activity Name</label>
-                    <input type="text" name="activity_name" placeholder="e.g., Basketball Tournament, Cultural Fest, Workshop" required>
+                    <input type="text" name="activity_name" placeholder="e.g., Sports Event, Cultural Program, Workshop, Seminar" required>
                 </div>
-                <button type="submit" class="btn btn-primary">Add Activity</button>
+                <div class="form-group">
+                    <label>Activity Date</label>
+                    <input type="date" name="activity_date" value="{{ date if date else datetime.now().strftime('%Y-%m-%d') }}" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit OD & Mark Present</button>
             </form>
         </div>
 
-        <div class="activities-list">
-            <h3>Activity List</h3>
-            {% if activities %}
-                {% for activity in activities %}
-                <div class="activity-card">
-                    <span class="activity-name">{{ activity.activity_name }}</span>
-                    <a href="{{ url_for('delete_activity', activity_id=activity.id, student_id=student.id, year=year, section=section) }}" class="btn btn-danger" onclick="return confirm('Delete this activity?')">Delete</a>
-                </div>
-                {% endfor %}
-            {% else %}
-                <p style="text-align: center; padding: 20px; color: #999;">No extracurricular activities added yet.</p>
-            {% endif %}
+        <div class="info-note">
+            <strong>Note:</strong> When you submit an OD activity, the student will automatically be marked <strong>PRESENT</strong> for the current period. This counts towards their attendance percentage.
         </div>
     </div>
 </body>

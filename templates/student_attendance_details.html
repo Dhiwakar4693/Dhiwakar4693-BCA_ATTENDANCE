@@ -5,322 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>{{ student.name }} - Attendance Details</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 30px;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #f0f0f0;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-
-        .header h1 {
-            color: #333;
-            font-size: 1.8em;
-        }
-
-        .student-info {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 25px;
-        }
-
-        .student-info h2 {
-            margin-bottom: 8px;
-            font-size: 1.5em;
-        }
-
-        .student-info p {
-            opacity: 0.9;
-            font-size: 0.95em;
-        }
-
-        .ec-section {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin-bottom: 25px;
-        }
-
-        .ec-title {
-            font-weight: bold;
-            color: #856404;
-            margin-bottom: 10px;
-            font-size: 1em;
-        }
-
-        .ec-badges {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .ec-badge {
-            background: #ffc107;
-            color: #333;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 500;
-            display: inline-block;
-        }
-
-        .no-ec {
-            color: #856404;
-            font-size: 0.9em;
-            font-style: italic;
-        }
-
-        .stats-container {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-
-        .stat-card {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-        }
-
-        .stat-card h3 {
-            font-size: 2em;
-            margin-bottom: 5px;
-        }
-
-        .stat-card p {
-            color: #666;
-            font-size: 0.85em;
-        }
-
-        .present {
-            color: #28a745;
-        }
-
-        .absent {
-            color: #dc3545;
-        }
-
-        .total {
-            color: #667eea;
-        }
-
-        .legend {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 20px;
-            padding: 12px 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-        }
-
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.85em;
-        }
-
-        .legend-color {
-            width: 16px;
-            height: 16px;
-            border-radius: 4px;
-        }
-
-        .legend-color.present {
-            background: #28a745;
-        }
-
-        .legend-color.absent {
-            background: #dc3545;
-        }
-
-        .legend-color.od {
-            background: #17a2b8;
-        }
-
-        .section-title {
-            margin: 20px 0 15px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid #e0e0e0;
-            font-size: 1.2em;
-            color: #333;
-        }
-
-        .table-wrapper {
-            overflow-x: auto;
-            border-radius: 12px;
-            margin-top: 10px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            min-width: 700px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        th {
-            background: #667eea;
-            color: white;
-            padding: 12px 8px;
-            text-align: center;
-            font-weight: 600;
-            font-size: 0.85em;
-        }
-
-        td {
-            padding: 10px 8px;
-            text-align: center;
-            border-bottom: 1px solid #f0f0f0;
-            font-size: 0.8em;
-        }
-
-        tr:hover {
-            background: #f8f9fa;
-        }
-
-        .present-badge {
-            display: inline-block;
-            background: #28a745;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.7em;
-            font-weight: 500;
-            margin-bottom: 3px;
-        }
-
-        .absent-badge {
-            display: inline-block;
-            background: #dc3545;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.7em;
-            font-weight: 500;
-            margin-bottom: 3px;
-        }
-
-        .od-badge {
-            display: inline-block;
-            background: #17a2b8;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 0.7em;
-            font-weight: 500;
-            margin-bottom: 3px;
-        }
-
-        .staff-name {
-            display: block;
-            font-size: 0.6em;
-            color: #888;
-            margin-top: 3px;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-            padding: 8px 16px;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 0.85em;
-            transition: all 0.3s;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px;
-            color: #999;
-            font-size: 0.9em;
-        }
-
-        .info-note {
-            margin-top: 20px;
-            padding: 12px 20px;
-            background: #e8f4f8;
-            border-radius: 10px;
-            text-align: center;
-            font-size: 0.75em;
-            color: #0066cc;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-
-            .container {
-                padding: 15px;
-            }
-
-            .stats-container {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 12px;
-            }
-
-            .stat-card h3 {
-                font-size: 1.5em;
-            }
-
-            .header h1 {
-                font-size: 1.3em;
-            }
-
-            th, td {
-                padding: 6px 4px;
-                font-size: 0.7em;
-            }
-
-            .present-badge, .absent-badge, .od-badge {
-                padding: 3px 6px;
-                font-size: 0.6em;
-            }
-
-            .ec-badge {
-                font-size: 0.7em;
-                padding: 3px 10px;
-            }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 16px; }
+        .container { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f0f0f0; flex-wrap: wrap; gap: 12px; }
+        .student-info { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px; border-radius: 15px; margin-bottom: 20px; }
+        .stats-container { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
+        .stat-card { background: #f8f9fa; padding: 12px; border-radius: 12px; text-align: center; }
+        .stat-card h3 { font-size: 1.5em; }
+        .present { color: #28a745; }
+        .absent { color: #dc3545; }
+        .total { color: #667eea; }
+        .legend { display: flex; gap: 16px; margin-bottom: 16px; padding: 10px; background: #f8f9fa; border-radius: 10px; flex-wrap: wrap; justify-content: center; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.7em; }
+        .legend-color { width: 14px; height: 14px; border-radius: 4px; }
+        .legend-color.present { background: #28a745; }
+        .legend-color.absent { background: #dc3545; }
+        .legend-color.od { background: #17a2b8; }
+        .section-title { margin: 16px 0 10px; padding-bottom: 6px; border-bottom: 2px solid #e0e0e0; font-size: 1.1em; }
+        .table-wrapper { overflow-x: auto; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; background: white; min-width: 600px; }
+        th { background: #667eea; color: white; padding: 8px 4px; text-align: center; font-size: 0.7em; }
+        td { padding: 8px 4px; text-align: center; border-bottom: 1px solid #f0f0f0; font-size: 0.7em; }
+        .present-badge { display: inline-block; background: #28a745; color: white; padding: 3px 8px; border-radius: 20px; font-size: 0.65em; margin-bottom: 3px; }
+        .absent-badge { display: inline-block; background: #dc3545; color: white; padding: 3px 8px; border-radius: 20px; font-size: 0.65em; margin-bottom: 3px; }
+        .od-badge { display: inline-block; background: #17a2b8; color: white; padding: 3px 8px; border-radius: 20px; font-size: 0.65em; margin-bottom: 3px; }
+        .od-activity-name { display: block; font-size: 0.55em; color: #0a5a6e; margin-top: 2px; font-weight: normal; }
+        .staff-name { display: block; font-size: 0.55em; color: #666; margin-top: 2px; }
+        .btn-secondary { background: #6c757d; color: white; padding: 6px 12px; text-decoration: none; border-radius: 8px; font-size: 0.8em; }
+        .info-note { margin-top: 16px; padding: 10px; background: #e8f4f8; border-radius: 10px; text-align: center; font-size: 0.65em; }
+        @media (min-width: 768px) {
+            .container { padding: 30px; }
+            .stats-container { grid-template-columns: repeat(4, 1fr); gap: 20px; }
+            .stat-card h3 { font-size: 2.2em; }
+            th { padding: 12px; font-size: 0.9em; }
+            td { padding: 10px; font-size: 0.85em; }
+            .present-badge, .absent-badge, .od-badge { padding: 4px 12px; font-size: 0.75em; }
         }
     </style>
 </head>
@@ -330,63 +50,25 @@
             <h1>Attendance Details</h1>
             <a href="{{ url_for('view_class', year=year, section=section) }}" class="btn-secondary">Back to Class</a>
         </div>
-
+        
         <div class="student-info">
             <h2>{{ student.name }}</h2>
-            <p>Register Number: <strong>{{ student.register_number }}</strong> | {{ year }} - Section {{ section }} | Batch: {{ student.batch }}</p>
+            <p>Register: <strong>{{ student.register_number }}</strong> | {{ year }} - Section {{ section }} | Batch: {{ student.batch }}</p>
         </div>
-
-        <!-- Extracurricular Activities Section -->
-        <div class="ec-section">
-            <div class="ec-title">Extracurricular Activities</div>
-            {% if ec_activities and ec_activities|length > 0 %}
-            <div class="ec-badges">
-                {% for activity in ec_activities %}
-                <span class="ec-badge">{{ activity }}</span>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="no-ec">No extracurricular activities added yet.</div>
-            {% endif %}
-        </div>
-
-        <!-- Statistics Cards -->
+        
         <div class="stats-container">
-            <div class="stat-card">
-                <h3 class="total">{{ total_days }}</h3>
-                <p>Total Days</p>
-            </div>
-            <div class="stat-card">
-                <h3 class="present">{{ present }}</h3>
-                <p>Periods Present</p>
-            </div>
-            <div class="stat-card">
-                <h3 class="absent">{{ absent }}</h3>
-                <p>Periods Absent</p>
-            </div>
-            <div class="stat-card">
-                <h3 style="color: #28a745;">{{ percentage }}%</h3>
-                <p>Attendance Percentage</p>
-            </div>
+            <div class="stat-card"><h3 class="total">{{ total_days }}</h3><p>Total Days</p></div>
+            <div class="stat-card"><h3 class="present">{{ present }}</h3><p>Periods Present</p></div>
+            <div class="stat-card"><h3 class="absent">{{ absent }}</h3><p>Periods Absent</p></div>
+            <div class="stat-card"><h3 style="color:#28a745;">{{ percentage }}%</h3><p>Periods Percentage</p></div>
         </div>
-
-        <!-- Legend -->
+        
         <div class="legend">
-            <div class="legend-item">
-                <div class="legend-color present"></div>
-                <span>Present</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color absent"></div>
-                <span>Absent</span>
-            </div>
-            <div class="legend-item">
-                <div class="legend-color od"></div>
-                <span>On Duty (OD)</span>
-            </div>
+            <div class="legend-item"><div class="legend-color present"></div><span>Present</span></div>
+            <div class="legend-item"><div class="legend-color od"></div><span>On Duty (OD) - Shows EC Activity</span></div>
+            <div class="legend-item"><div class="legend-color absent"></div><span>Absent</span></div>
         </div>
-
-        <!-- Daily Attendance Table -->
+        
         <h3 class="section-title">Daily Attendance Record</h3>
         <div class="table-wrapper">
             {% if daily_attendance %}
@@ -406,15 +88,20 @@
                     {% for date, periods in daily_attendance.items() %}
                     <tr>
                         <td><strong>{{ date.strftime('%d-%m-%Y') }}</strong></td>
-                        {% for period in range(1, 7) %}
+                        {% for period in range(1,7) %}
                         <td>
                             {% set record = periods.get(period) %}
                             {% if record and record.status == 'present' %}
+                                {% if record.is_od %}
+                                <span class="od-badge">OD</span>
+                                {% if record.od_activity_name %}
+                                <span class="od-activity-name">{{ record.od_activity_name }}</span>
+                                {% endif %}
+                                <span class="staff-name">{{ record.marked_by_name }}</span>
+                                {% else %}
                                 <span class="present-badge">Present</span>
                                 <span class="staff-name">{{ record.marked_by_name }}</span>
-                            {% elif record and record.status == 'od' %}
-                                <span class="od-badge">On Duty</span>
-                                <span class="staff-name">{{ record.marked_by_name }}</span>
+                                {% endif %}
                             {% elif record and record.status == 'absent' %}
                                 <span class="absent-badge">Absent</span>
                                 <span class="staff-name">{{ record.marked_by_name }}</span>
@@ -429,15 +116,11 @@
                 </tbody>
             </table>
             {% else %}
-            <div class="empty-state">
-                No attendance records found for this student.
-            </div>
+            <div class="empty-state"><p>No attendance records found.</p></div>
             {% endif %}
         </div>
-
-        <!-- Information Note -->
         <div class="info-note">
-            <strong>Note:</strong> Percentage = (Present Periods / Total Periods) x 100 | OD (On Duty) is considered as present for attendance calculation.
+            <strong>Note:</strong> Percentage = (Present Periods / Total Periods) x 100 | <span style="color:#17a2b8;">OD (On Duty)</span> shows the EC activity name when marked by staff.
         </div>
     </div>
 </body>

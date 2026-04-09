@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Add EC Activity - {{ student.name }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .student-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group select, .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .dynamic-field {
+            display: none;
+        }
+
+        .dynamic-field.active {
+            display: block;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #28a745;
+            color: white;
+            width: 100%;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .alert {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Add EC Activity</h1>
+            <a href="{{ url_for('view_class', year=year, section=section) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+
+        <div class="student-info">
+            <h2>{{ student.name }}</h2>
+            <p>Register No: {{ student.register_number }} | {{ year }} - Section {{ section }}</p>
+        </div>
+
+        {% if session.ec_error %}
+        <div class="alert alert-warning">
+            {{ session.ec_error }}
+            {% set _ = session.pop('ec_error', None) %}
+        </div>
+        {% endif %}
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Activity Type</label>
+                <select name="activity_type_id" id="activity_type" required>
+                    <option value="">Select Activity Type</option>
+                    {% for activity in activity_types %}
+                    <option value="{{ activity.id }}" data-type-name="{{ activity.name|lower }}">{{ activity.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Dynamic field for Sports - asks what sport -->
+            <div id="sport_field" class="dynamic-field">
+                <div class="form-group">
+                    <label>Which Sport?</label>
+                    <input type="text" name="sport_name" placeholder="e.g., Cricket, Football, Basketball, Kabaddi">
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Add EC Activity</button>
+        </form>
+    </div>
+
+    <script>
+        const activitySelect = document.getElementById('activity_type');
+        const sportField = document.getElementById('sport_field');
+
+        function checkActivityType() {
+            const selectedOption = activitySelect.options[activitySelect.selectedIndex];
+            const typeName = selectedOption ? selectedOption.getAttribute('data-type-name') : '';
+            
+            // Hide all dynamic fields first
+            sportField.classList.remove('active');
+            
+            // Show field only for Sports
+            if (typeName === 'sports') {
+                sportField.classList.add('active');
+            }
+        }
+
+        activitySelect.addEventListener('change', checkActivityType);
+        checkActivityType();
+    </script>
+</body>
+</html>

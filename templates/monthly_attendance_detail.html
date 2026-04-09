@@ -59,7 +59,7 @@
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            min-width: 700px;
+            min-width: 800px;
         }
 
         th {
@@ -118,13 +118,13 @@
             color: #721c24;
         }
 
-        .empty-cell {
-            background: #f0f0f0;
-            color: #999;
+        .partial-cell {
+            background: #fff3cd;
+            color: #856404;
         }
 
         .date-column {
-            min-width: 50px;
+            min-width: 55px;
         }
 
         .btn-secondary {
@@ -159,14 +159,6 @@
             background: white;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
             font-size: 0.85em;
-        }
-
-        .present-badge {
-            border-left: 4px solid #28a745;
-        }
-
-        .absent-badge {
-            border-left: 4px solid #dc3545;
         }
 
         .legend {
@@ -204,9 +196,9 @@
             border: 1px solid #dc3545;
         }
 
-        .legend-box.empty {
-            background: #f0f0f0;
-            border: 1px solid #ccc;
+        .legend-box.partial {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
         }
 
         .percentage-high {
@@ -250,6 +242,10 @@
             .percentage-cell {
                 left: 200px;
             }
+
+            .date-column {
+                min-width: 45px;
+            }
         }
     </style>
 </head>
@@ -257,7 +253,7 @@
     <div class="container">
         <div class="header">
             <h1>Monthly Attendance</h1>
-            <a href="{{ url_for('monthly_attendance', year=year, section=section) }}" class="btn-secondary">Back to Months</a>
+            <a href="{{ url_for('monthly_attendance', year=year, section=section) }}" class="btn btn-secondary">Back to Months</a>
         </div>
 
         <div class="month-title">
@@ -266,17 +262,17 @@
         </div>
 
         <div class="stats-summary">
-            <div class="stat-badge present-badge">
+            <div class="stat-badge">
                 Total Days: <strong>{{ dates|length }}</strong>
             </div>
-            <div class="stat-badge present-badge">
-                Present (P)
-            </div>
-            <div class="stat-badge absent-badge">
-                Absent (A)
+            <div class="stat-badge">
+                <span style="color: #28a745;">■</span> 6/6 (Full Present)
             </div>
             <div class="stat-badge">
-                No Data (-)
+                <span style="color: #ffc107;">■</span> 1-5/6 (Partial)
+            </div>
+            <div class="stat-badge">
+                <span style="color: #dc3545;">■</span> 0/6 (Absent)
             </div>
         </div>
 
@@ -288,7 +284,7 @@
                         <th style="min-width: 90px;">Register No</th>
                         <th style="min-width: 100px;">Attendance %</th>
                         {% for date in dates %}
-                        <th class="date-column">{{ date.strftime('%d') }}</th>
+                        <th class="date-column">{{ date.strftime('%d') }}<br><span style="font-size: 0.6em;">{{ date.strftime('%b') }}</span></th>
                         {% endfor %}
                     </tr>
                 </thead>
@@ -298,8 +294,9 @@
                         <td class="student-name">{{ student.name }}</td>
                         <td class="reg-no-cell">{{ student.reg_no }}</td>
                         <td class="percentage-cell">
-                            {% set present_count = student.daily.values()|select('equalto', 'present')|list|length %}
-                            {% set percentage = (present_count / dates|length * 100) if dates|length > 0 else 0 %}
+                            {% set total_days = dates|length %}
+                            {% set total_possible = total_days * 6 %}
+                            {% set percentage = (student.total_present / total_possible * 100) if total_possible > 0 else 0 %}
                             {% if percentage >= 75 %}
                             <span class="percentage-high">{{ "%.1f"|format(percentage) }}%</span>
                             {% elif percentage >= 40 %}
@@ -308,12 +305,12 @@
                             <span class="percentage-low">{{ "%.1f"|format(percentage) }}%</span>
                             {% endif %}
                             <br>
-                            <small>({{ present_count }}/{{ dates|length }})</small>
+                            <small>({{ student.total_present }}/{{ total_possible }})</small>
                         </td>
                         {% for date in dates %}
-                        {% set status = student.daily.get(date) %}
-                        <td class="{% if status == 'present' %}present-cell{% elif status == 'absent' %}absent-cell{% else %}empty-cell{% endif %}">
-                            {% if status == 'present' %}P{% elif status == 'absent' %}A{% else %}-{% endif %}
+                        {% set present_count = student.daily.get(date, 0) %}
+                        <td class="{% if present_count == 6 %}present-cell{% elif present_count == 0 %}absent-cell{% else %}partial-cell{% endif %}">
+                            {{ present_count }}/6
                         </td>
                         {% endfor %}
                     </tr>
@@ -325,24 +322,24 @@
         <div class="legend">
             <div class="legend-item">
                 <div class="legend-box present"></div>
-                <span>Present (P)</span>
+                <span>Full Present (6/6 periods)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-box partial"></div>
+                <span>Partial Present (1-5 periods)</span>
             </div>
             <div class="legend-item">
                 <div class="legend-box absent"></div>
-                <span>Absent (A)</span>
+                <span>Absent (0 periods)</span>
             </div>
             <div class="legend-item">
-                <div class="legend-box empty"></div>
-                <span>No Data (-)</span>
+                <span style="color: #28a745;">●</span> ≥75%
             </div>
             <div class="legend-item">
-                <span style="color: #28a745;">Green: ≥75%</span>
+                <span style="color: #ffc107;">●</span> 40-74%
             </div>
             <div class="legend-item">
-                <span style="color: #ffc107;">Yellow: 40-74%</span>
-            </div>
-            <div class="legend-item">
-                <span style="color: #dc3545;">Red: &lt;40%</span>
+                <span style="color: #dc3545;">●</span> &lt;40%
             </div>
         </div>
     </div>
