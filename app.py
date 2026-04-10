@@ -10,13 +10,21 @@ from pathlib import Path
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here-change-this-in-production'
 
-# Create instance folder if it doesn't exist
-instance_path = Path('instance')
-instance_path.mkdir(exist_ok=True)
+# ==================== DATABASE CONFIGURATION ====================
+# This is critical for Render deployment
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    # Render provides 'postgres://...' but SQLAlchemy 1.4+ needs 'postgresql://...'
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Fallback to local SQLite for development
+    instance_path = Path('instance')
+    instance_path.mkdir(exist_ok=True)
+    db_path = instance_path / 'attendance.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path.absolute()}'
 
-# Set database path
-db_path = instance_path / 'attendance.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path.absolute()}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Upload folder configuration
@@ -25,7 +33,7 @@ ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-print(f" Database location: {db_path.absolute()}")
+print(f" Database location: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
 db = SQLAlchemy(app)
 
@@ -211,19 +219,51 @@ def add_department():
     admin_password = request.form.get('admin_password', '').strip()
     
     if not dept_name or not dept_code or not admin_name or not admin_password:
-        return render_template('add_new_department.html', error='All fields are required!')
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
+        return render_template('add_new_department.html', 
+                             error='All fields are required!',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
     
     existing_dept = Department.query.filter_by(name=dept_name).first()
     if existing_dept:
-        return render_template('add_new_department.html', error=f'Department {dept_name} already exists!')
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
+        return render_template('add_new_department.html', 
+                             error=f'Department {dept_name} already exists!',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
     
     existing_code = Department.query.filter_by(code=dept_code).first()
     if existing_code:
-        return render_template('add_new_department.html', error=f'Department code {dept_code} already exists!')
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
+        return render_template('add_new_department.html', 
+                             error=f'Department code {dept_code} already exists!',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
     
     existing_admin = Staff.query.filter_by(name=admin_name).first()
     if existing_admin:
-        return render_template('add_new_department.html', error=f'Admin name {admin_name} already exists!')
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
+        return render_template('add_new_department.html', 
+                             error=f'Admin name {admin_name} already exists!',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
     
     try:
         department = Department(name=dept_name, code=dept_code)
@@ -252,11 +292,26 @@ def add_department():
         
         db.session.commit()
         
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
         return render_template('add_new_department.html', 
-                             success=f'Department {dept_name} created successfully! Admin {admin_name} can now login.')
+                             success=f'Department {dept_name} created successfully! Admin {admin_name} can now login.',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
     except Exception as e:
         db.session.rollback()
-        return render_template('add_new_department.html', error=f'Error: {str(e)}')
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
+        return render_template('add_new_department.html', 
+                             error=f'Error: {str(e)}',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
 
 @app.route('/add_global_staff', methods=['POST'])
 def add_global_staff():
@@ -265,11 +320,17 @@ def add_global_staff():
     staff_subject = request.form.get('staff_subject', '').strip()
     
     if not staff_name or not staff_password or not staff_subject:
-        return render_template('add_new_staff.html', error='All fields are required!')
+        all_staff = Staff.query.filter_by(is_department_admin=False).all()
+        return render_template('add_new_staff.html', 
+                             error='All fields are required!',
+                             all_staff=all_staff)
     
     existing = Staff.query.filter_by(name=staff_name).first()
     if existing:
-        return render_template('add_new_staff.html', error=f'Staff {staff_name} already exists!')
+        all_staff = Staff.query.filter_by(is_department_admin=False).all()
+        return render_template('add_new_staff.html', 
+                             error=f'Staff {staff_name} already exists!',
+                             all_staff=all_staff)
     
     try:
         staff = Staff(
@@ -287,11 +348,103 @@ def add_global_staff():
         
         db.session.commit()
         
+        all_staff = Staff.query.filter_by(is_department_admin=False).all()
         return render_template('add_new_staff.html', 
-                             success=f'Staff {staff_name} added successfully! They have access to all departments.')
+                             success=f'Staff {staff_name} added successfully! They have access to all departments.',
+                             all_staff=all_staff)
     except Exception as e:
         db.session.rollback()
-        return render_template('add_new_staff.html', error=f'Error: {str(e)}')
+        all_staff = Staff.query.filter_by(is_department_admin=False).all()
+        return render_template('add_new_staff.html', 
+                             error=f'Error: {str(e)}',
+                             all_staff=all_staff)
+
+@app.route('/delete_global_staff/<int:staff_id>')
+def delete_global_staff(staff_id):
+    staff = Staff.query.get_or_404(staff_id)
+    
+    if staff.is_department_admin:
+        all_staff = Staff.query.filter_by(is_department_admin=False).all()
+        return render_template('add_new_staff.html', 
+                             error=f'Cannot delete department admin!',
+                             all_staff=all_staff)
+    
+    StaffDepartment.query.filter_by(staff_id=staff_id).delete()
+    db.session.delete(staff)
+    db.session.commit()
+    
+    all_staff = Staff.query.filter_by(is_department_admin=False).all()
+    return render_template('add_new_staff.html', 
+                         success=f'Staff {staff.name} deleted successfully!',
+                         all_staff=all_staff)
+
+@app.route('/delete_department/<int:dept_id>')
+def delete_department(dept_id):
+    department = Department.query.get_or_404(dept_id)
+    
+    students_count = Student.query.filter_by(department_id=dept_id).count()
+    if students_count > 0:
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
+        return render_template('add_new_department.html', 
+                             error=f'Cannot delete! {students_count} students are in this department. Delete or move them first.',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
+    
+    admin = Staff.query.filter_by(admin_department_id=dept_id, is_department_admin=True).first()
+    if admin:
+        db.session.delete(admin)
+    
+    ClassSection.query.filter_by(department_id=dept_id).delete()
+    ActivityType.query.filter_by(department_id=dept_id).delete()
+    StaffDepartment.query.filter_by(department_id=dept_id).delete()
+    db.session.delete(department)
+    db.session.commit()
+    
+    all_departments = Department.query.all()
+    dept_admins = {}
+    for dept in all_departments:
+        admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+        dept_admins[dept.id] = admin
+    
+    return render_template('add_new_department.html', 
+                         success=f'Department {department.name} deleted successfully!',
+                         all_departments=all_departments,
+                         dept_admins=dept_admins)
+
+@app.route('/change_staff_password', methods=['POST'])
+def change_staff_password():
+    data = request.json
+    entity_type = data.get('type')
+    entity_id = data.get('id')
+    new_password = data.get('new_password')
+    
+    if not new_password or len(new_password) < 6:
+        return jsonify({'success': False, 'error': 'Password must be at least 6 characters'})
+    
+    try:
+        if entity_type == 'staff':
+            staff = Staff.query.get(entity_id)
+            if not staff:
+                return jsonify({'success': False, 'error': 'Staff not found'})
+            staff.set_password(new_password)
+            
+        elif entity_type == 'admin':
+            admin = Staff.query.get(entity_id)
+            if not admin:
+                return jsonify({'success': False, 'error': 'Admin not found'})
+            admin.set_password(new_password)
+        else:
+            return jsonify({'success': False, 'error': 'Invalid entity type'})
+        
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Password changed successfully'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/get_sections/<int:department_id>/<year>')
 def get_sections(department_id, year):
@@ -621,26 +774,6 @@ def delete_student(student_id):
     db.session.commit()
     
     return redirect(url_for('view_class', year=year, section=section))
-
-# ==================== STAFF MANAGEMENT ====================
-
-@app.route('/delete_staff/<int:staff_id>')
-def delete_staff(staff_id):
-    if session.get('role') != 'dept_admin':
-        return redirect(url_for('index'))
-    
-    staff = Staff.query.get_or_404(staff_id)
-    
-    if staff.is_department_admin:
-        session['upload_message'] = 'Cannot delete department admin!'
-        return redirect(url_for('admin_dashboard'))
-    
-    StaffDepartment.query.filter_by(staff_id=staff_id).delete()
-    db.session.delete(staff)
-    db.session.commit()
-    
-    session['upload_message'] = f' Staff member {staff.name} deleted successfully!'
-    return redirect(url_for('admin_dashboard'))
 
 # ==================== EC ACTIVITY TYPES MANAGEMENT ====================
 
@@ -1519,40 +1652,6 @@ def print_attendance(year, section):
                          students=summary,
                          print_date=datetime.now().strftime('%d-%m-%Y %H:%M'))
 
-# Store admin password in a file or database (for persistence)
-ADMIN_PASSWORD = 'admin123'  # Default password
-
-@app.route('/change_admin_password', methods=['POST'])
-def change_admin_password():
-    data = request.json
-    current_password = data.get('current_password')
-    new_password = data.get('new_password')
-    
-    global ADMIN_PASSWORD
-    
-    if current_password != ADMIN_PASSWORD:
-        return jsonify({'success': False, 'error': 'Current password is incorrect'})
-    
-    if not new_password or len(new_password) < 6:
-        return jsonify({'success': False, 'error': 'Password must be at least 6 characters'})
-    
-    ADMIN_PASSWORD = new_password
-    
-    # Optionally save to a file for persistence across server restarts
-    try:
-        with open('admin_password.txt', 'w') as f:
-            f.write(ADMIN_PASSWORD)
-        return jsonify({'success': True, 'message': 'Password changed successfully'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-# Load saved password on startup
-try:
-    with open('admin_password.txt', 'r') as f:
-        ADMIN_PASSWORD = f.read().strip()
-except:
-    pass
-
 @app.route('/change_password', methods=['GET', 'POST'])
 def change_password():
     if session.get('role') != 'dept_admin':
@@ -1745,107 +1844,11 @@ def logout():
     session.clear()
     return redirect(url_for('index'))
 
-# ==================== DELETE GLOBAL STAFF ====================
-
-@app.route('/delete_global_staff/<int:staff_id>')
-def delete_global_staff(staff_id):
-    staff = Staff.query.get_or_404(staff_id)
-    
-    if staff.is_department_admin:
-        return render_template('add_new_staff.html', 
-                             error=f'Cannot delete department admin!', 
-                             all_staff=Staff.query.filter_by(is_department_admin=False).all())
-    
-    # Delete staff from all department assignments first
-    StaffDepartment.query.filter_by(staff_id=staff_id).delete()
-    
-    db.session.delete(staff)
-    db.session.commit()
-    
-    all_staff = Staff.query.filter_by(is_department_admin=False).all()
-    return render_template('add_new_staff.html', 
-                         success=f'Staff {staff.name} deleted successfully!',
-                         all_staff=all_staff)
-
-# ==================== DELETE DEPARTMENT ====================
-
-@app.route('/delete_department/<int:dept_id>')
-def delete_department(dept_id):
-    department = Department.query.get_or_404(dept_id)
-    
-    # Check if there are students in this department
-    students_count = Student.query.filter_by(department_id=dept_id).count()
-    if students_count > 0:
-        all_departments = Department.query.all()
-        dept_admins = {}
-        for dept in all_departments:
-            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
-            dept_admins[dept.id] = admin
-        
-        return render_template('add_new_department.html', 
-                             error=f'Cannot delete! {students_count} students are in this department. Delete or move them first.',
-                             all_departments=all_departments,
-                             dept_admins=dept_admins)
-    
-    # Delete department admin first
-    admin = Staff.query.filter_by(admin_department_id=dept_id, is_department_admin=True).first()
-    if admin:
-        db.session.delete(admin)
-    
-    # Delete all sections for this department
-    ClassSection.query.filter_by(department_id=dept_id).delete()
-    
-    # Delete all activity types for this department
-    ActivityType.query.filter_by(department_id=dept_id).delete()
-    
-    # Delete staff assignments for this department
-    StaffDepartment.query.filter_by(department_id=dept_id).delete()
-    
-    # Delete the department
-    db.session.delete(department)
-    db.session.commit()
-    
-    all_departments = Department.query.all()
-    dept_admins = {}
-    for dept in all_departments:
-        admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
-        dept_admins[dept.id] = admin
-    
-    return render_template('add_new_department.html', 
-                         success=f'Department {department.name} deleted successfully!',
-                         all_departments=all_departments,
-                         dept_admins=dept_admins)
-
-@app.route('/change_staff_password', methods=['POST'])
-def change_staff_password():
-    data = request.json
-    entity_type = data.get('type')
-    entity_id = data.get('id')
-    new_password = data.get('new_password')
-    
-    if not new_password or len(new_password) < 6:
-        return jsonify({'success': False, 'error': 'Password must be at least 6 characters'})
-    
-    try:
-        if entity_type == 'staff':
-            staff = Staff.query.get(entity_id)
-            if not staff:
-                return jsonify({'success': False, 'error': 'Staff not found'})
-            staff.set_password(new_password)
-            
-        elif entity_type == 'admin':
-            admin = Staff.query.get(entity_id)
-            if not admin:
-                return jsonify({'success': False, 'error': 'Admin not found'})
-            admin.set_password(new_password)
-        else:
-            return jsonify({'success': False, 'error': 'Invalid entity type'})
-        
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Password changed successfully'})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
-
+# ==================== RUN THE APP ====================
+# This is critical for Render deployment
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Get the port from the environment variable RENDER uses
+    port = int(os.environ.get('PORT', 5000))
+    # Bind to 0.0.0.0 to accept requests from outside the container
+    app.run(host='0.0.0.0', port=port, debug=False)
+    
