@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>BCA Department - Admin Dashboard</title>
+    <title>{{ department.name }} - Admin Dashboard</title>
     <style>
         * {
             margin: 0;
@@ -49,6 +49,16 @@
             display: block;
         }
 
+        .department-badge {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            display: inline-block;
+            margin-left: 10px;
+        }
+
         .alert {
             padding: 12px 20px;
             border-radius: 8px;
@@ -60,12 +70,6 @@
             background: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
-        }
-
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
         }
 
         .stats-container {
@@ -266,20 +270,14 @@
             background: #138496;
         }
 
-        .admin-sections {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            margin: 40px 0;
-        }
-
-        .add-section {
+        .add-student-section {
             background: #f8f9fa;
             padding: 25px;
             border-radius: 15px;
+            margin-bottom: 30px;
         }
 
-        .add-section h3 {
+        .add-student-section h3 {
             color: #333;
             margin-bottom: 20px;
         }
@@ -329,60 +327,6 @@
             color: white;
         }
 
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-            padding: 4px 10px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 0.75em;
-            transition: background 0.3s;
-            display: inline-block;
-        }
-
-        .btn-danger:hover {
-            background: #c82333;
-        }
-
-        .staff-table-container {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 15px;
-            margin-top: 40px;
-            overflow-x: auto;
-        }
-
-        .staff-table-container h3 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        th {
-            background: #667eea;
-            color: white;
-            padding: 12px;
-            text-align: left;
-        }
-
-        td {
-            padding: 10px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-
         .report-buttons {
             display: flex;
             gap: 15px;
@@ -416,7 +360,7 @@
         }
 
         @media (max-width: 768px) {
-            .stats-container, .year-cards, .admin-sections {
+            .stats-container, .year-cards {
                 grid-template-columns: 1fr;
             }
             .upload-form {
@@ -444,7 +388,8 @@
     <div class="container">
         <div class="header">
             <div>
-                <h1>BCA Department <span>Admin Dashboard</span></h1>
+                <h1>{{ department.name }} Department <span>Admin Dashboard</span></h1>
+                <div class="department-badge">Code: {{ department.code }}</div>
             </div>
             <div class="action-buttons">
                 <a href="{{ url_for('ec_types') }}" class="btn btn-primary" style="background: #17a2b8;"> EC Activity Types</a>
@@ -464,13 +409,6 @@
         <div class="alert alert-success">
             {{ session.ec_message }}
             {% set _ = session.pop('ec_message', None) %}
-        </div>
-        {% endif %}
-
-        {% if session.section_message %}
-        <div class="alert alert-success">
-            {{ session.section_message }}
-            {% set _ = session.pop('section_message', None) %}
         </div>
         {% endif %}
 
@@ -516,7 +454,7 @@
         <div class="year-cards">
             {% for year in ['1st Year', '2nd Year', '3rd Year'] %}
             <div class="year-card">
-                <h3>{{ year }} BCA</h3>
+                <h3>{{ year }}</h3>
                 <div class="sections">
                     {% set year_sections = sections_by_year.get(year, []) %}
                     {% if year_sections %}
@@ -539,7 +477,6 @@
                         </div>
                     {% endif %}
                     
-                    <!-- Add section form -->
                     <div class="add-section-form">
                         <select id="new_section_{{ year }}">
                             <option value="">Select Section</option>
@@ -554,80 +491,37 @@
             {% endfor %}
         </div>
 
-        <div class="admin-sections">
-            <div class="add-section">
-                <h3>Add Student</h3>
-                <form action="{{ url_for('add_student') }}" method="POST">
-                    <div class="form-group"><label>Student Name:</label><input type="text" name="name" required></div>
-                    <div class="form-group"><label>Register Number:</label><input type="text" name="register_number" required></div>
-                    <div class="form-group"><label>Year:</label>
-                        <select name="year">
-                            <option value="1st Year">1st Year</option>
-                            <option value="2nd Year">2nd Year</option>
-                            <option value="3rd Year">3rd Year</option>
-                        </select>
-                    </div>
-                    <div class="form-group"><label>Section:</label>
-                        <select name="section">
-                            {% for section in all_sections %}
-                            <option value="{{ section.section }}">{{ section.section }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group"><label>Batch:</label><input type="text" name="batch" required></div>
-                    <button type="submit" class="btn btn-success">Add Student</button>
-                </form>
-            </div>
-
-            <div class="add-section">
-                <h3>Add Staff</h3>
-                <form action="{{ url_for('add_staff') }}" method="POST">
-                    <div class="form-group"><label>Staff Name:</label><input type="text" name="name" required></div>
-                    <div class="form-group"><label>Password:</label><input type="text" name="password" required></div>
-                    <div class="form-group"><label>Subject:</label><input type="text" name="subject" required></div>
-                    <button type="submit" class="btn btn-success">Add Staff</button>
-                </form>
-            </div>
+        <div class="add-student-section">
+            <h3>Add Student</h3>
+            <form action="{{ url_for('add_student') }}" method="POST">
+                <div class="form-group"><label>Student Name:</label><input type="text" name="name" required></div>
+                <div class="form-group"><label>Register Number:</label><input type="text" name="register_number" required></div>
+                <div class="form-group"><label>Year:</label>
+                    <select name="year">
+                        <option value="1st Year">1st Year</option>
+                        <option value="2nd Year">2nd Year</option>
+                        <option value="3rd Year">3rd Year</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Section:</label>
+                    <select name="section">
+                        {% for section in all_sections %}
+                        <option value="{{ section.section }}">{{ section.section }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group"><label>Batch:</label><input type="text" name="batch" required></div>
+                <button type="submit" class="btn btn-success">Add Student</button>
+            </form>
         </div>
 
-        <div class="staff-table-container">
-            <h3>Staff List</h3>
-            <div style="overflow-x: auto;">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Subject</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for member in staff %}
-                        <tr>
-                            <td>{{ member.name }}</div>
-                            <td>{{ member.subject }}</div>
-                            <td>
-                                <a href="{{ url_for('delete_staff', staff_id=member.id) }}" 
-                                   class="btn btn-danger" 
-                                   onclick="return confirm('Delete staff member {{ member.name }}?')">
-                                    Delete
-                                </a>
-                            </div>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-            
-            <!-- Report Buttons -->
-            <div class="report-buttons">
-                <a href="{{ url_for('all_ec_activities') }}" class="report-btn report-btn-ec">
-                     View All EC Activities
-                </a>
-                <a href="{{ url_for('od_by_date') }}" class="report-btn report-btn-od">
-                     View OD by Date
-                </a>
-            </div>
+        <div class="report-buttons">
+            <a href="{{ url_for('all_ec_activities') }}" class="report-btn report-btn-ec">
+                 View All EC Activities
+            </a>
+            <a href="{{ url_for('od_by_date') }}" class="report-btn report-btn-od">
+                 View OD by Date
+            </a>
         </div>
     </div>
 

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Add New Department</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #28a745;
+            color: white;
+            width: 100%;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary:hover {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+            padding: 4px 10px;
+            font-size: 0.75em;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+            margin-right: 5px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 4px 10px;
+            font-size: 0.75em;
+            border-radius: 4px;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .info-note {
+            background: #e8f4f8;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 0.85em;
+            color: #0066cc;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 0.85em;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 0.85em;
+        }
+
+        .department-list {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .department-list h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .department-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .department-table th {
+            background: #667eea;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-size: 0.85em;
+        }
+
+        .department-table td {
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 0.85em;
+        }
+
+        .department-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .admin-details {
+            font-size: 0.85em;
+        }
+
+        .password-status {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.7em;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            width: 400px;
+            max-width: 90%;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 15px;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .modal-buttons .save {
+            background: #28a745;
+            color: white;
+        }
+
+        .modal-buttons .cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            .department-table th, .department-table td {
+                padding: 6px;
+                font-size: 0.75em;
+            }
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Add New Department</h1>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Login</a>
+        </div>
+
+        {% if error %}
+        <div class="error-message">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        {% if success %}
+        <div class="success-message">
+            {{ success }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('add_department') }}">
+            <div class="form-group">
+                <label>Department Name *</label>
+                <input type="text" name="dept_name" placeholder="e.g., BCA, MCA, MBA" required>
+            </div>
+            <div class="form-group">
+                <label>Department Code *</label>
+                <input type="text" name="dept_code" placeholder="e.g., BCA, MCA" required>
+            </div>
+            <div class="form-group">
+                <label>Admin Name *</label>
+                <input type="text" name="admin_name" required>
+            </div>
+            <div class="form-group">
+                <label>Admin Password *</label>
+                <input type="password" name="admin_password" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Create Department</button>
+        </form>
+
+        <div class="department-list">
+            <h3>Existing Departments</h3>
+            {% if all_departments %}
+            <table class="department-table">
+                <thead>
+                    <tr>
+                        <th>Department Name</th>
+                        <th>Code</th>
+                        <th>Admin Details</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dept in all_departments %}
+                    <tr id="dept-row-{{ dept.id }}">
+                        <td>{{ dept.name }}</div>
+                        <td>{{ dept.code }}</div>
+                        <td class="admin-details">
+                            {% set admin = dept_admins.get(dept.id) %}
+                            {% if admin %}
+                            <strong>{{ admin.name }}</strong><br>
+                            <span class="password-status">✓ Password Secured</span>
+                            {% else %}
+                            No admin found
+                            {% endif %}
+                        </div>
+                        <td>
+                            <div class="action-buttons">
+                                {% if admin %}
+                                <button class="btn-warning" onclick="showChangePasswordModal('admin', '{{ admin.id }}', '{{ admin.name }}')">Change Password</button>
+                                {% endif %}
+                                <a href="{{ url_for('delete_department', dept_id=dept.id) }}" 
+                                   class="btn btn-danger" 
+                                   onclick="return confirm('Delete department {{ dept.name }}? This will delete ALL students, staff assignments, and attendance records for this department!')">
+                                    Delete
+                                </a>
+                            </div>
+                        </div>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="text-align: center; color: #999; padding: 20px;">No departments added yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="info-note">
+            <strong>Note:</strong> Department will be created with default sections (A, B, C) and default EC activity types. Passwords are securely encrypted.
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <h3>Change Password</h3>
+            <input type="hidden" id="entityType">
+            <input type="hidden" id="entityId">
+            <p id="entityName" style="margin-bottom: 10px;"></p>
+            <input type="password" id="newPassword" placeholder="Enter new password" autocomplete="off">
+            <input type="password" id="confirmPassword" placeholder="Confirm new password">
+            <div class="modal-buttons">
+                <button class="save" onclick="changePassword()">Save</button>
+                <button class="cancel" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showChangePasswordModal(type, id, name) {
+            document.getElementById('entityType').value = type;
+            document.getElementById('entityId').value = id;
+            document.getElementById('entityName').innerHTML = '<strong>' + name + '</strong>';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('passwordModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+        }
+
+        function changePassword() {
+            var type = document.getElementById('entityType').value;
+            var id = document.getElementById('entityId').value;
+            var newPassword = document.getElementById('newPassword').value;
+            var confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!newPassword) {
+                alert('Please enter a new password');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+
+            fetch('/change_staff_password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    type: type,
+                    id: id,
+                    new_password: newPassword
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Password changed successfully!');
+                    closeModal();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to change password');
+            });
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            var modal = document.getElementById('passwordModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>
