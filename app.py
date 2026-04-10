@@ -7,19 +7,20 @@ import pandas as pd
 import os
 from pathlib import Path
 
+# ==================== APP CONFIGURATION ====================
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here-change-this-in-production'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here-change-this-in-production')
 
-# ==================== DATABASE CONFIGURATION ====================
-# This is critical for Render deployment
+# Database Configuration
+# Check for Render's PostgreSQL database URL first
 database_url = os.environ.get('DATABASE_URL')
 if database_url:
-    # Render provides 'postgres://...' but SQLAlchemy 1.4+ needs 'postgresql://...'
+    # Fix for SQLAlchemy 1.4+ which requires 'postgresql://' not 'postgres://'
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
-    # Fallback to local SQLite for development
+    # Fallback to SQLite for local development
     instance_path = Path('instance')
     instance_path.mkdir(exist_ok=True)
     db_path = instance_path / 'attendance.db'
@@ -33,9 +34,8 @@ ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-print(f" Database location: {app.config['SQLALCHEMY_DATABASE_URI']}")
-
 db = SQLAlchemy(app)
+print(f"Using database: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
 # ==================== DATABASE MODELS ====================
 
@@ -1846,9 +1846,12 @@ def logout():
 
 # ==================== RUN THE APP ====================
 # This is critical for Render deployment
+if __name__ != '__main__':
+    # When running with Gunicorn (on Render), we just need the app object
+    pass
+
 if __name__ == '__main__':
-    # Get the port from the environment variable RENDER uses
+    # This block only runs when you execute 'python app.py' directly
+    # It is NOT used by Gunicorn on Render
     port = int(os.environ.get('PORT', 5000))
-    # Bind to 0.0.0.0 to accept requests from outside the container
     app.run(host='0.0.0.0', port=port, debug=False)
-    
