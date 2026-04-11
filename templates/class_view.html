@@ -89,6 +89,7 @@
         .table-wrapper {
             overflow-x: auto;
             margin-top: 20px;
+            position: relative;
         }
 
         table {
@@ -219,6 +220,7 @@
             text-align: center;
         }
 
+        /* IMPROVED DROPDOWN - Fixed positioning */
         .dropdown {
             position: relative;
             display: inline-block;
@@ -233,6 +235,7 @@
             cursor: pointer;
             font-size: 0.75em;
             font-weight: 600;
+            transition: all 0.2s;
         }
 
         .dropbtn:hover {
@@ -241,30 +244,27 @@
 
         .dropdown-content {
             display: none;
-            position: absolute;
-            right: 0;
+            position: fixed;
             background-color: white;
-            min-width: 140px;
+            min-width: 160px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1;
+            z-index: 1000;
             border-radius: 8px;
+            overflow: hidden;
         }
 
         .dropdown-content a {
             color: #333;
-            padding: 8px 12px;
+            padding: 10px 15px;
             text-decoration: none;
             display: block;
-            font-size: 0.75em;
+            font-size: 0.8em;
             text-align: left;
+            transition: background 0.2s;
         }
 
         .dropdown-content a:hover {
             background-color: #f0f0f0;
-        }
-
-        .dropdown:hover .dropdown-content {
-            display: block;
         }
 
         .print-btn, .back-btn {
@@ -311,7 +311,7 @@
             padding: 25px;
             border-radius: 10px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-            z-index: 1000;
+            z-index: 1001;
             width: 350px;
             text-align: center;
         }
@@ -354,6 +354,29 @@
             color: white;
         }
 
+        /* Action button styles */
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .action-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1em;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .action-icon:hover {
+            background: #f0f0f0;
+            transform: scale(1.05);
+        }
+
         @media (max-width: 768px) {
             .stats-container {
                 grid-template-columns: repeat(2, 1fr);
@@ -366,10 +389,6 @@
                 padding: 6px;
                 font-size: 0.7em;
             }
-            .dropbtn {
-                padding: 4px 8px;
-                font-size: 0.65em;
-            }
             .ec-badge {
                 font-size: 0.6em;
                 padding: 2px 6px;
@@ -378,16 +397,24 @@
                 font-size: 0.55em;
                 padding: 2px 6px;
             }
+            .dropbtn {
+                padding: 4px 8px;
+                font-size: 0.65em;
+            }
+            .action-buttons {
+                flex-direction: column;
+                gap: 4px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>BCA {{ year }} - Section {{ section }}</h1>
+            <h1>{{ year }} - Section {{ section }}</h1>
             <div>
-                <a href="{{ url_for('print_attendance', year=year, section=section) }}" class="print-btn">Print</a>
-                <a href="{{ url_for('admin_dashboard') }}" class="back-btn">Back</a>
+                <a href="{{ url_for('print_attendance', year=year, section=section) }}" class="print-btn">🖨️ Print</a>
+                <a href="{{ url_for('admin_dashboard') }}" class="back-btn">← Back</a>
             </div>
         </div>
 
@@ -416,7 +443,7 @@
         </div>
 
         <div class="info-note">
-            Percentage = (Present Periods / Total Periods) x 100 | Click ✗ on badges to delete EC activities
+            💡 Percentage = (Present Periods / Total Periods) x 100 | Click ✗ on badges to delete EC activities
         </div>
 
         <div class="table-wrapper">
@@ -439,8 +466,8 @@
                 <tbody>
                     {% for student in students %}
                     <tr id="student-row-{{ student.id }}">
-                        <td>{{ loop.index }}</td>
-                        <td>{{ student.reg_no }}</td>
+                        <td>{{ loop.index }}</div>
+                        <td>{{ student.reg_no }}</div>
                         <td class="student-name">
                             <div class="student-info-cell">
                                 <div class="student-header">{{ student.name }}</div>
@@ -458,7 +485,7 @@
                                     {% endfor %}
                                 </div>
                                 {% endif %}
-                                <a href="{{ url_for('ec_activity', student_id=student.id, year=year, section=section) }}" class="ec-btn">Add EC Activity</a>
+                                <a href="{{ url_for('ec_activity', student_id=student.id, year=year, section=section) }}" class="ec-btn">➕ Add EC Activity</a>
                             </div>
                         </div>
                         <td>{{ student.batch }}</div>
@@ -471,20 +498,16 @@
                         </div>
                         <td>
                             {% if student.percentage >= 75 %}
-                            <span style="color: #28a745;">Good</span>
+                            <span style="color: #28a745;">✅ Good</span>
                             {% elif student.percentage >= 40 %}
-                            <span style="color: #ffc107;">Average</span>
+                            <span style="color: #ffc107;">⚠️ Average</span>
                             {% else %}
-                            <span style="color: #dc3545;">Low</span>
+                            <span style="color: #dc3545;">❌ Low</span>
                             {% endif %}
                         </div>
-                        <td class="dropdown">
-                            <button class="dropbtn">Actions</button>
-                            <div class="dropdown-content">
-                                <a href="{{ url_for('student_attendance_details', student_id=student.id, year=year, section=section) }}">Details</a>
-                                <a href="{{ url_for('add_new_date_attendance', student_id=student.id, year=year, section=section) }}">Add Date</a>
-                                <a href="{{ url_for('add_previous_attendance', student_id=student.id) }}">Add Previous</a>
-                                <a href="#" class="delete-student-link" data-student-id="{{ student.id }}" data-student-name="{{ student.name }}">Delete</a>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-icon" onclick="showActionMenu(this, '{{ student.id }}', '{{ student.name }}', '{{ year }}', '{{ section }}')" title="Actions">⚙️</button>
                             </div>
                         </div>
                     </tr>
@@ -492,6 +515,14 @@
                 </tbody>
             </table>
         </div>
+    </div>
+
+    <!-- Floating Action Menu (replaces dropdown) -->
+    <div id="actionMenu" class="dropdown-content" style="display: none;">
+        <a href="#" id="actionDetails">📋 View Details</a>
+        <a href="#" id="actionAddDate">📅 Add Date Attendance</a>
+        <a href="#" id="actionAddPrevious">📜 Add Previous Attendance</a>
+        <a href="#" id="actionDeleteStudent">🗑️ Delete Student</a>
     </div>
 
     <!-- Delete EC Activity Confirmation Popup -->
@@ -508,10 +539,60 @@
     <script>
         let deleteActivityId = null;
         let deleteStudentIdForEC = null;
+        let currentActionStudentId = null;
+        let currentActionYear = null;
+        let currentActionSection = null;
+
+        // Floating Action Menu
+        const actionMenu = document.getElementById('actionMenu');
+        
+        function showActionMenu(button, studentId, studentName, year, section) {
+            currentActionStudentId = studentId;
+            currentActionYear = year;
+            currentActionSection = section;
+            
+            // Get button position
+            const rect = button.getBoundingClientRect();
+            
+            // Position the menu near the button
+            actionMenu.style.display = 'block';
+            actionMenu.style.position = 'fixed';
+            actionMenu.style.top = (rect.bottom + 5) + 'px';
+            actionMenu.style.left = (rect.left - 100) + 'px';
+            
+            // Adjust if off screen
+            const menuRect = actionMenu.getBoundingClientRect();
+            if (menuRect.right > window.innerWidth) {
+                actionMenu.style.left = (window.innerWidth - menuRect.width - 10) + 'px';
+            }
+            if (menuRect.bottom > window.innerHeight) {
+                actionMenu.style.top = (rect.top - menuRect.height - 5) + 'px';
+            }
+            
+            // Set up action links
+            document.getElementById('actionDetails').href = `/student_attendance_details/${studentId}/${year}/${section}`;
+            document.getElementById('actionAddDate').href = `/add_new_date_attendance/${studentId}/${year}/${section}`;
+            document.getElementById('actionAddPrevious').href = `/add_previous_attendance/${studentId}`;
+            document.getElementById('actionDeleteStudent').onclick = function(e) {
+                e.preventDefault();
+                if (confirm(`Delete student ${studentName}? This cannot be undone!`)) {
+                    window.location.href = `/delete_student/${studentId}`;
+                }
+                actionMenu.style.display = 'none';
+            };
+        }
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.action-icon') && !event.target.closest('#actionMenu')) {
+                actionMenu.style.display = 'none';
+            }
+        });
 
         // Handle EC Activity Delete
         document.querySelectorAll('.delete-ec').forEach(function(button) {
-            button.addEventListener('click', function() {
+            button.addEventListener('click', function(e) {
+                e.stopPropagation();
                 deleteActivityId = this.getAttribute('data-activity-id');
                 deleteStudentIdForEC = this.getAttribute('data-student-id');
                 var activityName = this.getAttribute('data-activity-name');
@@ -557,18 +638,6 @@
             }
         }
 
-        // Handle Student Delete
-        document.querySelectorAll('.delete-student-link').forEach(function(link) {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                var studentId = this.getAttribute('data-student-id');
-                var studentName = this.getAttribute('data-student-name');
-                if (confirm('Delete student ' + studentName + '? This cannot be undone!')) {
-                    window.location.href = '/delete_student/' + studentId;
-                }
-            });
-        });
-
         // Close popup when clicking on overlay
         var overlay = document.getElementById('popupOverlay');
         if (overlay) {
@@ -581,6 +650,7 @@
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 closeDeletePopup();
+                actionMenu.style.display = 'none';
             }
         });
     </script>

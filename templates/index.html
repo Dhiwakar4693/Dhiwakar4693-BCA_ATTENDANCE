@@ -3,141 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>College Attendance System</title>
+    <title>JAYA COLLEGE - Attendance System</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #764ba2 100%);
             min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .bubble {
+            position: absolute;
+            bottom: -100px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: rise 10s infinite ease-in;
+            z-index: 0;
+        }
+
+        @keyframes rise {
+            0% {
+                bottom: -100px;
+                transform: translateX(0);
+            }
+            50% {
+                transform: translateX(100px);
+            }
+            100% {
+                bottom: 1080px;
+                transform: translateX(-200px);
+            }
         }
 
         .container {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 30px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
             width: 100%;
-            max-width: 550px;
+            max-width: 950px;
             margin: 0 auto;
             padding: 30px;
+            position: relative;
+            z-index: 1;
+            backdrop-filter: blur(10px);
         }
 
-        h1 {
+        /* Logo Section */
+        .logo-section {
             text-align: center;
-            color: #333;
-            margin-bottom: 8px;
-            font-size: 1.8em;
+            margin-bottom: 20px;
         }
 
-        .subtitle {
+        .college-logo {
+            max-width: 100%;
+            width: auto;
+            height: auto;
+            max-height: 150px;
+            margin-bottom: 10px;
+            object-fit: contain;
+        }
+
+        .system-title {
             text-align: center;
             color: #667eea;
-            margin-bottom: 24px;
-            font-size: 0.9em;
+            margin-bottom: 30px;
+            font-size: 1em;
+            font-weight: 500;
+            padding-top: 5px;
+            border-top: 1px solid #e0e0e0;
+            display: inline-block;
+            width: auto;
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+
+        .error-message, .success-message {
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 0.85em;
         }
 
         .error-message {
             background: #f8d7da;
             color: #721c24;
-            padding: 12px;
-            border-radius: 10px;
-            margin-bottom: 16px;
-            text-align: center;
-            font-size: 0.85em;
+            border-left: 4px solid #dc3545;
         }
 
         .success-message {
             background: #d4edda;
             color: #155724;
-            padding: 12px;
-            border-radius: 10px;
-            margin-bottom: 16px;
-            text-align: center;
-            font-size: 0.85em;
+            border-left: 4px solid #28a745;
         }
 
-        .role-buttons {
+        .head-container {
+            margin-bottom: 25px;
+        }
+
+        .head-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.2em;
+            transition: all 0.3s;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .head-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .role-row {
             display: flex;
-            gap: 10px;
-            margin-bottom: 24px;
+            gap: 15px;
+            margin-bottom: 25px;
             flex-wrap: wrap;
         }
 
-        .role-btn {
+        .role-column {
             flex: 1;
+            min-width: 200px;
+            background: #f8f9fa;
+            border-radius: 20px;
+            padding: 18px;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .role-column:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+
+        .role-btn {
+            width: 100%;
             padding: 12px;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
             color: white;
             font-weight: bold;
             font-size: 1em;
-            transition: transform 0.2s;
+            transition: all 0.3s;
+            text-align: center;
+            margin-bottom: 12px;
         }
 
         .role-btn:hover {
             transform: translateY(-2px);
         }
 
-        .role-btn.dept-admin { background: #dc3545; }
-        .role-btn.staff { background: #28a745; }
-        .role-btn.student { background: #007bff; }
+        .dept-admin { background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); }
+        .staff { background: linear-gradient(135deg, #28a745 0%, #218838 100%); }
+        .student { background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); }
 
         .login-form {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 15px;
             display: none;
+            margin-top: 12px;
         }
 
         .form-group {
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             color: #555;
             font-weight: 500;
-            font-size: 0.85em;
+            font-size: 0.8em;
         }
 
-        .form-group input,
-        .form-group select {
+        .form-group input, .form-group select {
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
-            font-size: 0.9em;
-        }
-
-        .form-group input:focus,
-        .form-group select:focus {
-            outline: none;
-            border-color: #667eea;
+            font-size: 0.85em;
         }
 
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            gap: 8px;
         }
 
         .btn {
-            padding: 10px;
+            padding: 8px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 0.9em;
+            font-size: 0.85em;
             font-weight: 600;
             width: 100%;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             transition: all 0.2s;
         }
 
@@ -161,67 +241,6 @@
             transform: translateY(-2px);
         }
 
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #218838;
-            transform: translateY(-2px);
-        }
-
-        .add-dept-btn, .add-staff-btn {
-            display: block;
-            background: #17a2b8;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-bottom: 15px;
-            width: 100%;
-            transition: all 0.3s;
-            text-align: center;
-            text-decoration: none;
-        }
-
-        .add-dept-btn:hover, .add-staff-btn:hover {
-            background: #138496;
-            transform: translateY(-2px);
-        }
-
-        .add-staff-btn {
-            background: #fd7e14;
-        }
-
-        .add-staff-btn:hover {
-            background: #e67e22;
-        }
-
-        .change-password-btn {
-            display: block;
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-bottom: 15px;
-            width: 100%;
-            transition: all 0.3s;
-            text-align: center;
-            font-size: 0.85em;
-        }
-
-        .change-password-btn:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-
-        /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
@@ -229,8 +248,9 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.6);
             z-index: 1000;
+            backdrop-filter: blur(5px);
         }
 
         .modal-content {
@@ -240,19 +260,22 @@
             transform: translate(-50%, -50%);
             background: white;
             padding: 25px;
-            border-radius: 10px;
-            width: 400px;
+            border-radius: 20px;
+            width: 350px;
             max-width: 90%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
         }
 
         .modal-content h3 {
             margin-bottom: 15px;
+            color: #333;
+            font-size: 1.2em;
         }
 
         .modal-content input {
             width: 100%;
             padding: 10px;
-            margin: 10px 0;
+            margin: 8px 0;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
         }
@@ -267,8 +290,9 @@
             flex: 1;
             padding: 10px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
+            font-weight: 600;
         }
 
         .modal-buttons .save {
@@ -281,294 +305,276 @@
             color: white;
         }
 
-        @media (max-width: 480px) {
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
             .container {
                 padding: 20px;
             }
-            
-            h1 {
-                font-size: 1.5em;
+            .college-logo {
+                max-height: 100px;
             }
-            
-            .role-btn {
-                padding: 10px;
-                font-size: 0.85em;
+            .role-row {
+                flex-direction: column;
+                gap: 12px;
             }
-            
+            .role-column {
+                min-width: auto;
+            }
+            .head-btn {
+                padding: 12px;
+                font-size: 1em;
+            }
             .form-row {
                 grid-template-columns: 1fr;
                 gap: 0;
+            }
+            .system-title {
+                font-size: 0.9em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .college-logo {
+                max-height: 80px;
+            }
+            .container {
+                padding: 15px;
+            }
+            .role-btn {
+                padding: 10px;
+                font-size: 0.9em;
             }
         }
     </style>
 </head>
 <body>
+    <div class="bubble" style="left: 10%; width: 60px; height: 60px; animation-duration: 12s;"></div>
+    <div class="bubble" style="left: 20%; width: 30px; height: 30px; animation-duration: 8s; animation-delay: 2s;"></div>
+    <div class="bubble" style="left: 35%; width: 80px; height: 80px; animation-duration: 15s; animation-delay: 1s;"></div>
+    <div class="bubble" style="left: 50%; width: 45px; height: 45px; animation-duration: 10s; animation-delay: 4s;"></div>
+    <div class="bubble" style="left: 65%; width: 55px; height: 55px; animation-duration: 13s; animation-delay: 0s;"></div>
+    <div class="bubble" style="left: 80%; width: 35px; height: 35px; animation-duration: 9s; animation-delay: 3s;"></div>
+    <div class="bubble" style="left: 90%; width: 70px; height: 70px; animation-duration: 11s; animation-delay: 5s;"></div>
+
     <div class="container">
-        <h1>🎓 College Attendance System</h1>
-        <div class="subtitle">Multi-Department Attendance Management</div>
+        <!-- Logo Section -->
+        <div class="logo-section">
+            <img src="{{ url_for('static', filename='image/zhgm990j_.png') }}" alt="Jaya College of Arts & Science" class="college-logo" onerror="this.style.display='none'">
+            <div class="system-title">🎓 Attendance Management System</div>
+        </div>
         
         {% if error %}
-        <div class="error-message">
-            {{ error }}
-        </div>
+        <div class="error-message">{{ error }}</div>
         {% endif %}
         
         {% if success %}
-        <div class="success-message">
-            {{ success }}
-        </div>
+        <div class="success-message">{{ success }}</div>
         {% endif %}
         
-        <!-- Change Admin Password Button -->
-        <button class="change-password-btn" onclick="showChangeAdminPasswordModal()">🔐 Change Admin Password</button>
-        
-        <!-- Add Department Button -->
-        <button onclick="checkPasswordAndRedirect('add_department')" class="add-dept-btn">+ Add New Department</button>
-        
-        <!-- Add Staff Button -->
-        <button onclick="checkPasswordAndRedirect('add_staff')" class="add-staff-btn">+ Add New Staff</button>
-        
-        <div class="role-buttons">
-            <button onclick="showLogin('dept_admin')" class="role-btn dept-admin">Department Admin</button>
-            <button onclick="showLogin('staff')" class="role-btn staff">Staff</button>
-            <button onclick="showLogin('student')" class="role-btn student">Student</button>
+        <div class="head-container">
+            <button onclick="handleHeadClick()" class="head-btn">👨‍💼 Head Dashboard</button>
         </div>
+        
+        <div class="role-row">
+            <div class="role-column">
+                <button onclick="showLogin('dept_admin')" class="role-btn dept-admin">🏛️ Department Admin</button>
+                <div id="deptAdminLogin" class="login-form">
+                    <form method="POST" action="{{ url_for('login') }}">
+                        <input type="hidden" name="role" value="dept_admin">
+                        <div class="form-group">
+                            <label>Department</label>
+                            <select name="department_id" required>
+                                <option value="">Select Department</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Admin Name</label>
+                            <input type="text" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" name="password" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                        <button type="button" onclick="hideLoginForms()" class="btn btn-secondary">Cancel</button>
+                    </form>
+                </div>
+            </div>
 
-        <!-- Department Admin Login -->
-        <div id="deptAdminLogin" class="login-form">
-            <h3 style="text-align: center; margin-bottom: 16px;">Department Admin Login</h3>
-            <form method="POST" action="{{ url_for('login') }}">
-                <input type="hidden" name="role" value="dept_admin">
-                <div class="form-group">
-                    <label>Department:</label>
-                    <select name="department_id" required>
-                        <option value="">Select Department</option>
-                        {% for dept in departments %}
-                        <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.code }})</option>
-                        {% endfor %}
-                    </select>
+            <div class="role-column">
+                <button onclick="showLogin('staff')" class="role-btn staff">👨‍🏫 Staff</button>
+                <div id="staffLogin" class="login-form">
+                    <form method="POST" action="{{ url_for('login') }}">
+                        <input type="hidden" name="role" value="staff">
+                        <div class="form-group">
+                            <label>Department</label>
+                            <select name="department_id" required>
+                                <option value="">Select Department</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Name</label>
+                            <input type="text" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" name="password" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Year</label>
+                                <select name="year" required>
+                                    <option value="1st Year">1st Year</option>
+                                    <option value="2nd Year">2nd Year</option>
+                                    <option value="3rd Year">3rd Year</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Section</label>
+                                <select name="section" required>
+                                    <option value="">Select Section</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Subject</label>
+                                <input type="text" name="subject" placeholder="e.g., Python" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Period</label>
+                                <select name="period" required>
+                                    <option value="1">Period 1</option>
+                                    <option value="2">Period 2</option>
+                                    <option value="3">Period 3</option>
+                                    <option value="4">Period 4</option>
+                                    <option value="5">Period 5</option>
+                                    <option value="6">Period 6</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                        <button type="button" onclick="hideLoginForms()" class="btn btn-secondary">Cancel</button>
+                    </form>
                 </div>
-                <div class="form-group">
-                    <label>Admin Name:</label>
-                    <input type="text" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label>Password:</label>
-                    <input type="password" name="password" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Login</button>
-                <button type="button" onclick="hideAll()" class="btn btn-secondary">Back</button>
-            </form>
-        </div>
+            </div>
 
-        <!-- Staff Login -->
-        <div id="staffLogin" class="login-form">
-            <h3 style="text-align: center; margin-bottom: 16px;">Staff Login</h3>
-            <form method="POST" action="{{ url_for('login') }}">
-                <input type="hidden" name="role" value="staff">
-                <div class="form-group">
-                    <label>Department:</label>
-                    <select name="department_id" required>
-                        <option value="">Select Department</option>
-                        {% for dept in departments %}
-                        <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.code }})</option>
-                        {% endfor %}
-                    </select>
+            <div class="role-column">
+                <button onclick="showLogin('student')" class="role-btn student">🎓 Student</button>
+                <div id="studentLogin" class="login-form">
+                    <form method="POST" action="{{ url_for('login') }}">
+                        <input type="hidden" name="role" value="student">
+                        <div class="form-group">
+                            <label>Department</label>
+                            <select name="department_id" required>
+                                <option value="">Select Department</option>
+                                {% for dept in departments %}
+                                <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.code }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Name</label>
+                            <input type="text" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Register Number</label>
+                            <input type="text" name="register_number" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Year</label>
+                                <select name="year" required>
+                                    <option value="1st Year">1st Year</option>
+                                    <option value="2nd Year">2nd Year</option>
+                                    <option value="3rd Year">3rd Year</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Section</label>
+                                <select name="section" required>
+                                    <option value="">Select Section</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Login</button>
+                        <button type="button" onclick="hideLoginForms()" class="btn btn-secondary">Cancel</button>
+                    </form>
                 </div>
-                <div class="form-group">
-                    <label>Name:</label>
-                    <input type="text" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label>Password:</label>
-                    <input type="password" name="password" required>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Year:</label>
-                        <select name="year" required>
-                            <option value="1st Year">1st Year</option>
-                            <option value="2nd Year">2nd Year</option>
-                            <option value="3rd Year">3rd Year</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Section:</label>
-                        <select name="section" required>
-                            <option value="">Select Section</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Subject:</label>
-                        <input type="text" name="subject" placeholder="e.g., Python" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Period:</label>
-                        <select name="period" required>
-                            <option value="1">Period 1</option>
-                            <option value="2">Period 2</option>
-                            <option value="3">Period 3</option>
-                            <option value="4">Period 4</option>
-                            <option value="5">Period 5</option>
-                            <option value="6">Period 6</option>
-                        </select>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary">Login</button>
-                <button type="button" onclick="hideAll()" class="btn btn-secondary">Back</button>
-            </form>
-        </div>
-
-        <!-- Student Login -->
-        <div id="studentLogin" class="login-form">
-            <h3 style="text-align: center; margin-bottom: 16px;">Student Login</h3>
-            <form method="POST" action="{{ url_for('login') }}">
-                <input type="hidden" name="role" value="student">
-                <div class="form-group">
-                    <label>Department:</label>
-                    <select name="department_id" required>
-                        <option value="">Select Department</option>
-                        {% for dept in departments %}
-                        <option value="{{ dept.id }}">{{ dept.name }} ({{ dept.code }})</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Name:</label>
-                    <input type="text" name="name" required>
-                </div>
-                <div class="form-group">
-                    <label>Register Number:</label>
-                    <input type="text" name="register_number" required>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Year:</label>
-                        <select name="year" required>
-                            <option value="1st Year">1st Year</option>
-                            <option value="2nd Year">2nd Year</option>
-                            <option value="3rd Year">3rd Year</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Section:</label>
-                        <select name="section" required>
-                            <option value="">Select Section</option>
-                        </select>
-                    </div>
-                </div>
-                <button type="submit" class="btn btn-primary">Login</button>
-                <button type="button" onclick="hideAll()" class="btn btn-secondary">Back</button>
-            </form>
+            </div>
         </div>
     </div>
 
-    <!-- Change Admin Password Modal -->
-    <div id="adminPasswordModal" class="modal">
+    <div id="headPasswordModal" class="modal">
         <div class="modal-content">
-            <h3>Change Admin Password</h3>
-            <input type="password" id="currentAdminPassword" placeholder="Current Admin Password">
-            <input type="password" id="newAdminPassword" placeholder="New Password (min 6 characters)">
-            <input type="password" id="confirmAdminPassword" placeholder="Confirm New Password">
+            <h3>🔐 Head Dashboard Access</h3>
+            <p style="margin-bottom: 15px; color: #666;">Enter admin password to continue</p>
+            <input type="password" id="headPassword" placeholder="Admin Password" autofocus>
+            <p style="margin-top: 10px; font-size: 0.8em; color: #999;">Default password: <strong>admin123</strong></p>
             <div class="modal-buttons">
-                <button class="save" onclick="changeAdminPassword()">Save</button>
-                <button class="cancel" onclick="closeAdminPasswordModal()">Cancel</button>
+                <button class="save" onclick="verifyHeadPassword()">Verify</button>
+                <button class="cancel" onclick="closeHeadModal()">Cancel</button>
             </div>
         </div>
     </div>
 
     <script>
-        let ADMIN_PASSWORD = 'admin123'; // Current admin password
-
-        function showChangeAdminPasswordModal() {
-            document.getElementById('currentAdminPassword').value = '';
-            document.getElementById('newAdminPassword').value = '';
-            document.getElementById('confirmAdminPassword').value = '';
-            document.getElementById('adminPasswordModal').style.display = 'block';
+        function handleHeadClick() {
+            document.getElementById('headPassword').value = '';
+            document.getElementById('headPasswordModal').style.display = 'block';
+            setTimeout(() => {
+                document.getElementById('headPassword').focus();
+            }, 100);
         }
 
-        function closeAdminPasswordModal() {
-            document.getElementById('adminPasswordModal').style.display = 'none';
+        function closeHeadModal() {
+            document.getElementById('headPasswordModal').style.display = 'none';
         }
 
-        function changeAdminPassword() {
-            const currentPassword = document.getElementById('currentAdminPassword').value;
-            const newPassword = document.getElementById('newAdminPassword').value;
-            const confirmPassword = document.getElementById('confirmAdminPassword').value;
-
-            if (currentPassword !== ADMIN_PASSWORD) {
-                alert('Current password is incorrect!');
-                return;
-            }
-
-            if (!newPassword) {
-                alert('Please enter a new password');
-                return;
-            }
-
-            if (newPassword !== confirmPassword) {
-                alert('Passwords do not match!');
-                return;
-            }
-
-            if (newPassword.length < 6) {
-                alert('Password must be at least 6 characters');
-                return;
-            }
-
-            // Update the password
-            ADMIN_PASSWORD = newPassword;
+        function verifyHeadPassword() {
+            const enteredPassword = document.getElementById('headPassword').value;
             
-            // Also update on the server
-            fetch('/change_admin_password', {
+            if (!enteredPassword) {
+                alert('Please enter the admin password');
+                return;
+            }
+            
+            fetch('/verify_head_password', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    current_password: currentPassword,
-                    new_password: newPassword
+                    password: enteredPassword
                 })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    alert('Admin password changed successfully!');
-                    closeAdminPasswordModal();
-                    // Update the local variable
-                    ADMIN_PASSWORD = newPassword;
+                    closeHeadModal();
+                    window.location.href = "/head_dashboard";
                 } else {
-                    alert('Error: ' + data.error);
+                    alert('Invalid password! Access denied.');
+                    document.getElementById('headPassword').value = '';
+                    document.getElementById('headPassword').focus();
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Failed to change password');
+                alert('Failed to verify password. Please try again.');
             });
         }
 
-        function checkPasswordAndRedirect(type) {
-            const enteredPassword = prompt('Enter admin password to continue:');
-            
-            if (enteredPassword === null) {
-                return;
-            }
-            
-            if (enteredPassword === ADMIN_PASSWORD) {
-                if (type === 'add_department') {
-                    window.location.href = "{{ url_for('add_new_department_page') }}";
-                } else if (type === 'add_staff') {
-                    window.location.href = "{{ url_for('add_new_staff_page') }}";
-                }
-            } else {
-                alert('Invalid password! Access denied.');
-            }
-        }
-        
         function showLogin(role) {
-            hideAll();
+            hideLoginForms();
             if (role === 'dept_admin') {
                 document.getElementById('deptAdminLogin').style.display = 'block';
             } else if (role === 'staff') {
@@ -578,7 +584,7 @@
             }
         }
 
-        function hideAll() {
+        function hideLoginForms() {
             document.getElementById('deptAdminLogin').style.display = 'none';
             document.getElementById('staffLogin').style.display = 'none';
             document.getElementById('studentLogin').style.display = 'none';
@@ -627,11 +633,21 @@
 
         // Close modal when clicking outside
         window.onclick = function(event) {
-            const modal = document.getElementById('adminPasswordModal');
+            const modal = document.getElementById('headPasswordModal');
             if (event.target == modal) {
-                closeAdminPasswordModal();
+                closeHeadModal();
             }
         }
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                const modal = document.getElementById('headPasswordModal');
+                if (modal.style.display === 'block') {
+                    closeHeadModal();
+                }
+            }
+        });
     </script>
 </body>
 </html>

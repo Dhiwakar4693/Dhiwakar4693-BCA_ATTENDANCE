@@ -13,15 +13,15 @@
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
 
         .container {
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 30px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
             max-width: 1300px;
             margin: 0 auto;
             padding: 30px;
@@ -39,7 +39,7 @@
         }
 
         .header h2 {
-            color: #333;
+            color: #1e3c72;
             font-size: 1.8em;
         }
 
@@ -52,11 +52,21 @@
             margin-left: 10px;
         }
 
+        .subjects-badge {
+            background: #17a2b8;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.7em;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
         .class-info {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 15px;
             margin-bottom: 20px;
         }
 
@@ -147,6 +157,7 @@
             padding: 15px;
             background: #f8f9fa;
             border-radius: 10px;
+            flex-wrap: wrap;
         }
 
         .bulk-btn {
@@ -182,6 +193,7 @@
         .table-wrapper {
             overflow-x: auto;
             margin-top: 20px;
+            position: relative;
         }
 
         table {
@@ -227,7 +239,7 @@
             cursor: pointer;
             font-weight: bold;
             transition: all 0.3s;
-            min-width: 70px;
+            min-width: 80px;
             font-size: 0.85em;
         }
 
@@ -251,6 +263,7 @@
             color: #666;
         }
 
+        /* IMPROVED OD DROPDOWN - Fixed positioning */
         .od-dropdown {
             position: relative;
             display: inline-block;
@@ -266,6 +279,7 @@
             font-weight: bold;
             font-size: 0.85em;
             min-width: 70px;
+            transition: all 0.2s;
         }
 
         .od-dropbtn:hover {
@@ -274,18 +288,15 @@
 
         .od-dropdown-content {
             display: none;
-            position: absolute;
-            right: 0;
+            position: fixed;
             background-color: white;
             min-width: 200px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 100;
+            z-index: 1000;
             border-radius: 8px;
             padding: 5px 0;
-        }
-
-        .od-dropdown:hover .od-dropdown-content {
-            display: block;
+            max-height: 300px;
+            overflow-y: auto;
         }
 
         .od-dropdown-content a {
@@ -305,6 +316,7 @@
             display: flex;
             gap: 15px;
             margin-top: 30px;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -359,6 +371,38 @@
             border: 1px solid #f5c6cb;
         }
 
+        /* Loading overlay */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 15px;
@@ -397,42 +441,43 @@
     <input type="hidden" id="periodValue" value="{{ period }}">
     <input type="hidden" id="todayDate" value="{{ today }}">
     
-    <div class="unsaved-indicator" id="unsavedIndicator">Unsaved Changes</div>
+    <div class="unsaved-indicator" id="unsavedIndicator">⚠️ Unsaved Changes</div>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner"></div>
+    </div>
 
     <div class="container">
         <div class="header">
-            <h2>Staff - {{ staff_name }} <span class="department-badge">{{ department.name }} ({{ department.code }})</span></h2>
-            <a href="{{ url_for('logout') }}" class="btn btn-secondary" id="logoutBtn">Logout</a>
+            <div>
+                <h2>👨‍🏫 Staff - {{ staff_name }}</h2>
+                <div class="subjects-badge">📚 Subjects: {{ staff_subjects|join(', ') }}</div>
+            </div>
+            <a href="#" class="btn btn-secondary" id="logoutBtn">Logout</a>
         </div>
 
         <div class="class-info">
             <h3>{{ year }} - Section {{ section }}</h3>
-            <p>Subject: <strong>{{ subject }}</strong> | Total Students: <strong>{{ students|length }}</strong></p>
+            <p>Department: <strong>{{ department.name }} ({{ department.code }})</strong> | Total Students: <strong>{{ students|length }}</strong></p>
         </div>
 
         <div class="period-info">
-            Marking Attendance for <strong>Period {{ period }}</strong>
-            {% if period == 1 or period == 4 %}
-            <span style="font-size: 0.8em;"> (3 points - Key Period)</span>
-            {% else %}
-            <span style="font-size: 0.8em;"> (0.75 points)</span>
-            {% endif %}
+            📊 Marking Attendance for <strong>Period {{ period }}</strong>
         </div>
 
         <div class="date-info">
-            Date: {{ today }}
+            📅 Date: {{ today }}
         </div>
 
         {% if session.od_success %}
         <div class="alert alert-success">
-            {{ session.od_success }}
+            ✅ {{ session.od_success }}
             {% set _ = session.pop('od_success', None) %}
         </div>
         {% endif %}
 
         {% if session.od_error %}
         <div class="alert alert-error">
-            {{ session.od_error }}
+            ❌ {{ session.od_error }}
             {% set _ = session.pop('od_error', None) %}
         </div>
         {% endif %}
@@ -470,9 +515,9 @@
                 <tbody>
                     {% for student in students %}
                     <tr id="row-{{ student.id }}">
-                        <td>{{ loop.index }}</td>
-                        <td>{{ student.register_number }} id="reg-{{ student.id }}"</td>
-                        <td class="student-name">{{ student.name }}</td>
+                        <td>{{ loop.index }}</div>
+                        <td id="reg-{{ student.id }}">{{ student.register_number }}</div>
+                        <td class="student-name">{{ student.name }}</div>
                         <td class="attendance-cell">
                             {% set status = attendance_dict.get(student.id, {}).get(period) %}
                             <div class="attendance-options">
@@ -481,12 +526,12 @@
                                         data-regno="{{ student.register_number }}"
                                         data-status="present"
                                         onclick="markAttendance(this, '{{ student.register_number }}', 'present')">
-                                    Present
+                                    ✅ Present
                                 </button>
                                 
                                 <div class="od-dropdown">
-                                    <button class="od-dropbtn">OD ▼</button>
-                                    <div class="od-dropdown-content">
+                                    <button class="od-dropbtn" onclick="toggleODMenu(event, this, '{{ student.register_number }}')">🎯 OD ▼</button>
+                                    <div id="od-menu-{{ student.id }}" class="od-dropdown-content">
                                         {% for activity in activity_types %}
                                         <a href="#" onclick="markOD('{{ student.register_number }}', '{{ activity.id }}', '{{ activity.name }}'); return false;">
                                             🎯 {{ activity.name }}
@@ -500,10 +545,10 @@
                                         data-regno="{{ student.register_number }}"
                                         data-status="absent"
                                         onclick="markAttendance(this, '{{ student.register_number }}', 'absent')">
-                                    Absent
+                                    ❌ Absent
                                 </button>
                             </div>
-                        </td>
+                        </div>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -521,6 +566,8 @@
         let currentPeriod = parseInt(document.getElementById('periodValue').value);
         let currentDate = document.getElementById('todayDate').value;
         const unsavedIndicator = document.getElementById('unsavedIndicator');
+        let markedStudents = new Set();
+        let activeODMenu = null;
         
         function updateUnsavedIndicator() {
             if (hasUnsavedChanges) {
@@ -548,10 +595,59 @@
             document.getElementById('absentCount').textContent = absentCount;
         }
         
+        function toggleODMenu(event, button, regNo) {
+            event.stopPropagation();
+            const dropdownId = button.parentElement.querySelector('.od-dropdown-content');
+            const allMenus = document.querySelectorAll('.od-dropdown-content');
+            
+            // Close all other menus
+            allMenus.forEach(menu => {
+                if (menu !== dropdownId) {
+                    menu.style.display = 'none';
+                }
+            });
+            
+            // Toggle current menu
+            if (dropdownId.style.display === 'block') {
+                dropdownId.style.display = 'none';
+                activeODMenu = null;
+            } else {
+                // Position the menu
+                const rect = button.getBoundingClientRect();
+                dropdownId.style.display = 'block';
+                dropdownId.style.position = 'fixed';
+                dropdownId.style.top = (rect.bottom + 5) + 'px';
+                dropdownId.style.left = (rect.left) + 'px';
+                
+                // Adjust if off screen
+                const menuRect = dropdownId.getBoundingClientRect();
+                if (menuRect.right > window.innerWidth) {
+                    dropdownId.style.left = (window.innerWidth - menuRect.width - 10) + 'px';
+                }
+                if (menuRect.bottom > window.innerHeight) {
+                    dropdownId.style.top = (rect.top - menuRect.height - 5) + 'px';
+                }
+                
+                activeODMenu = dropdownId;
+            }
+        }
+        
+        // Close menus when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.od-dropdown')) {
+                const allMenus = document.querySelectorAll('.od-dropdown-content');
+                allMenus.forEach(menu => {
+                    menu.style.display = 'none';
+                });
+                activeODMenu = null;
+            }
+        });
+        
         function markAttendance(button, regNo, status) {
             const row = button.closest('tr');
             const presentBtn = row.querySelector('.present-btn');
             const absentBtn = row.querySelector('.absent-btn');
+            const studentId = button.getAttribute('data-student-id');
             
             if (status === 'present') {
                 presentBtn.classList.remove('present-inactive');
@@ -577,6 +673,7 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    markedStudents.add(studentId + '_' + currentPeriod);
                     hasUnsavedChanges = true;
                     updateUnsavedIndicator();
                     updateStatistics();
@@ -584,11 +681,22 @@
             })
             .catch(error => {
                 console.error('Error:', error);
+                alert('❌ Failed to mark attendance');
             });
         }
         
+        function showLoading() {
+            document.getElementById('loadingOverlay').classList.add('active');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('active');
+        }
+        
         function markOD(regNo, activityTypeId, activityName) {
-            if (confirm(`Mark ${regNo} as ON DUTY for "${activityName}"?`)) {
+            if (confirm(`🎯 Mark ${regNo} as ON DUTY for "${activityName}"?\n\nThis will mark them PRESENT for Period ${currentPeriod}.`)) {
+                showLoading();
+                
                 fetch('/staff_mark_od', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -602,119 +710,149 @@
                 })
                 .then(response => response.json())
                 .then(data => {
+                    hideLoading();
                     if (data.success) {
                         const rows = document.querySelectorAll('tbody tr');
                         for (let row of rows) {
                             const regCell = row.querySelector('td:nth-child(2)');
-                            if (regCell && regCell.textContent === regNo) {
+                            if (regCell && regCell.textContent.trim() === regNo) {
                                 const presentBtn = row.querySelector('.present-btn');
                                 const absentBtn = row.querySelector('.absent-btn');
+                                const studentId = presentBtn.getAttribute('data-student-id');
+                                
                                 presentBtn.classList.remove('present-inactive');
                                 presentBtn.classList.add('present-active');
                                 absentBtn.classList.remove('absent-active');
                                 absentBtn.classList.add('absent-inactive');
+                                
+                                markedStudents.add(studentId + '_' + currentPeriod);
+                                hasUnsavedChanges = true;
+                                updateUnsavedIndicator();
+                                updateStatistics();
                                 break;
                             }
                         }
-                        hasUnsavedChanges = true;
-                        updateUnsavedIndicator();
-                        updateStatistics();
-                        alert(`OD marked for ${regNo} - ${activityName}`);
+                        alert(`✅ OD marked for ${regNo} - ${activityName}`);
+                        
+                        // Close the OD menu
+                        const allMenus = document.querySelectorAll('.od-dropdown-content');
+                        allMenus.forEach(menu => menu.style.display = 'none');
                     } else {
-                        alert('Error: ' + data.error);
+                        alert('❌ Error: ' + data.error);
                     }
                 })
                 .catch(error => {
+                    hideLoading();
                     console.error('Error:', error);
-                    alert('Failed to mark OD');
+                    alert('❌ Failed to mark OD');
                 });
             }
         }
         
         document.getElementById('bulkPresentBtn').addEventListener('click', async function() {
-            if (confirm('Mark ALL students as PRESENT for Period ' + currentPeriod + '?')) {
+            if (confirm(`Mark ALL students as PRESENT for Period ${currentPeriod}?`)) {
+                showLoading();
                 const rows = document.querySelectorAll('tbody tr');
                 let successCount = 0;
                 
                 for (const row of rows) {
-                    const regNo = row.querySelector('.present-btn').getAttribute('data-regno');
                     const presentBtn = row.querySelector('.present-btn');
                     const absentBtn = row.querySelector('.absent-btn');
+                    const regNo = presentBtn.getAttribute('data-regno');
+                    const studentId = presentBtn.getAttribute('data-student-id');
                     
-                    if (presentBtn && !presentBtn.classList.contains('present-active')) {
-                        presentBtn.classList.remove('present-inactive');
-                        presentBtn.classList.add('present-active');
-                        absentBtn.classList.remove('absent-active');
-                        absentBtn.classList.add('absent-inactive');
-                        
-                        const response = await fetch('/update_temp_attendance', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                reg_no: regNo,
-                                period: currentPeriod,
-                                status: 'present'
-                            })
-                        });
-                        const data = await response.json();
-                        if (data.success) successCount++;
+                    if (presentBtn.classList.contains('present-active')) continue;
+                    
+                    presentBtn.classList.remove('present-inactive');
+                    presentBtn.classList.add('present-active');
+                    absentBtn.classList.remove('absent-active');
+                    absentBtn.classList.add('absent-inactive');
+                    
+                    const response = await fetch('/update_temp_attendance', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            reg_no: regNo,
+                            period: currentPeriod,
+                            status: 'present'
+                        })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        successCount++;
+                        markedStudents.add(studentId + '_' + currentPeriod);
                     }
                 }
                 
+                hideLoading();
                 if (successCount > 0) {
                     hasUnsavedChanges = true;
                     updateUnsavedIndicator();
                     updateStatistics();
-                    alert(`${successCount} students marked as PRESENT`);
+                    alert(`✅ ${successCount} students marked as PRESENT`);
                 } else {
-                    alert('All students are already marked as PRESENT');
+                    alert('ℹ️ All students are already marked as PRESENT');
                 }
             }
         });
         
         document.getElementById('bulkAbsentBtn').addEventListener('click', async function() {
-            if (confirm('Mark ALL students as ABSENT for Period ' + currentPeriod + '?')) {
+            if (confirm(`Mark ALL students as ABSENT for Period ${currentPeriod}?`)) {
+                showLoading();
                 const rows = document.querySelectorAll('tbody tr');
                 let successCount = 0;
                 
                 for (const row of rows) {
-                    const regNo = row.querySelector('.present-btn').getAttribute('data-regno');
                     const presentBtn = row.querySelector('.present-btn');
                     const absentBtn = row.querySelector('.absent-btn');
+                    const regNo = presentBtn.getAttribute('data-regno');
+                    const studentId = presentBtn.getAttribute('data-student-id');
                     
-                    if (absentBtn && !absentBtn.classList.contains('absent-active')) {
-                        absentBtn.classList.remove('absent-inactive');
-                        absentBtn.classList.add('absent-active');
-                        presentBtn.classList.remove('present-active');
-                        presentBtn.classList.add('present-inactive');
-                        
-                        const response = await fetch('/update_temp_attendance', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                reg_no: regNo,
-                                period: currentPeriod,
-                                status: 'absent'
-                            })
-                        });
-                        const data = await response.json();
-                        if (data.success) successCount++;
+                    if (absentBtn.classList.contains('absent-active')) continue;
+                    
+                    absentBtn.classList.remove('absent-inactive');
+                    absentBtn.classList.add('absent-active');
+                    presentBtn.classList.remove('present-active');
+                    presentBtn.classList.add('present-inactive');
+                    
+                    const response = await fetch('/update_temp_attendance', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            reg_no: regNo,
+                            period: currentPeriod,
+                            status: 'absent'
+                        })
+                    });
+                    const data = await response.json();
+                    if (data.success) {
+                        successCount++;
+                        markedStudents.add(studentId + '_' + currentPeriod);
                     }
                 }
                 
+                hideLoading();
                 if (successCount > 0) {
                     hasUnsavedChanges = true;
                     updateUnsavedIndicator();
                     updateStatistics();
-                    alert(`${successCount} students marked as ABSENT`);
+                    alert(`✅ ${successCount} students marked as ABSENT`);
                 } else {
-                    alert('All students are already marked as ABSENT');
+                    alert('ℹ️ All students are already marked as ABSENT');
                 }
             }
         });
         
         function saveAttendance() {
-            if (confirm('Save all attendance marks for Period ' + currentPeriod + ' and exit?')) {
+            if (markedStudents.size === 0 && !hasUnsavedChanges) {
+                if (confirm('No changes were made. Exit anyway?')) {
+                    window.removeEventListener('beforeunload', beforeUnloadHandler);
+                    window.location.href = "{{ url_for('clear_temp_attendance') }}";
+                }
+                return;
+            }
+            
+            if (confirm(`Save all attendance marks for Period ${currentPeriod}?`)) {
                 window.removeEventListener('beforeunload', beforeUnloadHandler);
                 hasUnsavedChanges = false;
                 window.location.href = "{{ url_for('save_attendance') }}";
@@ -722,17 +860,21 @@
         }
         
         function discardAttendance() {
-            if (confirm('Discard all unsaved changes for Period ' + currentPeriod + ' and exit?')) {
-                window.removeEventListener('beforeunload', beforeUnloadHandler);
-                hasUnsavedChanges = false;
+            if (markedStudents.size > 0) {
+                if (confirm(`Discard all unsaved changes for Period ${currentPeriod}?`)) {
+                    window.removeEventListener('beforeunload', beforeUnloadHandler);
+                    hasUnsavedChanges = false;
+                    window.location.href = "{{ url_for('clear_temp_attendance') }}";
+                }
+            } else {
                 window.location.href = "{{ url_for('clear_temp_attendance') }}";
             }
         }
         
         function beforeUnloadHandler(e) {
-            if (hasUnsavedChanges) {
+            if (hasUnsavedChanges && markedStudents.size > 0) {
                 e.preventDefault();
-                e.returnValue = 'You have unsaved attendance marks. Are you sure you want to leave?';
+                e.returnValue = `You have unsaved attendance marks. Are you sure you want to leave?`;
                 return e.returnValue;
             }
         }
@@ -740,13 +882,15 @@
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', function(e) {
-                if (hasUnsavedChanges) {
-                    e.preventDefault();
-                    if (confirm('You have unsaved changes! Save before logging out?')) {
+                e.preventDefault();
+                if (hasUnsavedChanges && markedStudents.size > 0) {
+                    if (confirm(`You have unsaved changes! Save before logging out?`)) {
                         saveAttendance();
                     } else {
                         window.location.href = "{{ url_for('logout') }}";
                     }
+                } else {
+                    window.location.href = "{{ url_for('logout') }}";
                 }
             });
         }

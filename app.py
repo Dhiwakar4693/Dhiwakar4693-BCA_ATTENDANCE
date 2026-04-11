@@ -10,13 +10,18 @@ from pathlib import Path
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here-change-this-in-production'
 
-# Create instance folder if it doesn't exist
-instance_path = Path('instance')
-instance_path.mkdir(exist_ok=True)
+# ==================== DATABASE CONFIGURATION ====================
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    if database_url.startswith('postgres://'):
+        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    instance_path = Path('instance')
+    instance_path.mkdir(exist_ok=True)
+    db_path = instance_path / 'attendance.db'
+    app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path.absolute()}'
 
-# Set database path
-db_path = instance_path / 'attendance.db'
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path.absolute()}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Upload folder configuration
@@ -25,9 +30,23 @@ ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-print(f" Database location: {db_path.absolute()}")
-
 db = SQLAlchemy(app)
+
+# ==================== ADMIN PASSWORD MANAGEMENT ====================
+ADMIN_PASSWORD_FILE = 'admin_password.txt'
+
+def get_admin_password():
+    """Get the current admin password"""
+    try:
+        with open(ADMIN_PASSWORD_FILE, 'r') as f:
+            return f.read().strip()
+    except:
+        return 'admin123'
+
+def set_admin_password(password):
+    """Set a new admin password"""
+    with open(ADMIN_PASSWORD_FILE, 'w') as f:
+        f.write(password)
 
 # ==================== DATABASE MODELS ====================
 
@@ -62,16 +81,29 @@ class Staff(db.Model):
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100), nullable=False)
     password_hash = db.Column(db.String(200), nullable=False)
-    subject = db.Column(db.String(100))
     is_department_admin = db.Column(db.Boolean, default=False)
     admin_department_id = db.Column(db.Integer, db.ForeignKey('departments.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
+    
+    subjects = db.relationship('StaffSubject', backref='staff', lazy=True, cascade='all, delete-orphan')
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
     
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    def get_subjects_list(self):
+        return [s.subject for s in self.subjects]
+
+class StaffSubject(db.Model):
+    __tablename__ = 'staff_subjects'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    staff_id = db.Column(db.Integer, db.ForeignKey('staff.id'), nullable=False)
+    subject = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    
+    __table_args__ = (db.UniqueConstraint('staff_id', 'subject', name='unique_staff_subject'),)
 
 class StaffDepartment(db.Model):
     __tablename__ = 'staff_departments'
@@ -131,7 +163,7 @@ class ClassSection(db.Model):
 # Create tables
 with app.app_context():
     db.create_all()
-    print(" Database tables created successfully!")
+    print("✅ Database tables created successfully!")
     
     # Check if subject column exists in attendance table
     try:
@@ -141,7 +173,7 @@ with app.app_context():
             with app.app_context():
                 db.session.execute('ALTER TABLE attendance ADD COLUMN subject VARCHAR(100)')
                 db.session.commit()
-                print(" Added subject column to attendance")
+                print("✅ Added subject column to attendance")
         except:
             pass
 
@@ -187,117 +219,104 @@ def index():
     departments = Department.query.all()
     return render_template('index.html', departments=departments)
 
-@app.route('/add_new_department_page')
-def add_new_department_page():
-    all_departments = Department.query.all()
-    dept_admins = {}
-    for dept in all_departments:
-        admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
-        dept_admins[dept.id] = admin
-    return render_template('add_new_department.html', 
-                         all_departments=all_departments,
-                         dept_admins=dept_admins)
+@app.route('/verify_head_password', methods=['POST'])
+def verify_head_password():
+    data = request.json
+    password = data.get('password')
+    admin_password = get_admin_password()
+    
+    if password == admin_password:
+        return jsonify({'success': True})
+    else:
+        return jsonify({'success': False})
 
-@app.route('/add_new_staff_page')
-def add_new_staff_page():
-    all_staff = Staff.query.filter_by(is_department_admin=False).all()
-    return render_template('add_new_staff.html', all_staff=all_staff)
+@app.route('/change_head_password', methods=['POST'])
+def change_head_password():
+    data = request.json
+    current_password = data.get('current_password')
+    new_password = data.get('new_password')
+    
+    admin_password = get_admin_password()
+    
+    if current_password != admin_password:
+        return jsonify({'success': False, 'error': 'Current password is incorrect'})
+    
+    if not new_password or len(new_password) < 6:
+        return jsonify({'success': False, 'error': 'Password must be at least 6 characters'})
+    
+    set_admin_password(new_password)
+    return jsonify({'success': True, 'message': 'Password changed successfully'})
 
-@app.route('/add_department', methods=['POST'])
-def add_department():
-    dept_name = request.form.get('dept_name', '').strip()
-    dept_code = request.form.get('dept_code', '').strip().upper()
-    admin_name = request.form.get('admin_name', '').strip()
-    admin_password = request.form.get('admin_password', '').strip()
-    
-    if not dept_name or not dept_code or not admin_name or not admin_password:
-        return render_template('add_new_department.html', error='All fields are required!')
-    
-    existing_dept = Department.query.filter_by(name=dept_name).first()
-    if existing_dept:
-        return render_template('add_new_department.html', error=f'Department {dept_name} already exists!')
-    
-    existing_code = Department.query.filter_by(code=dept_code).first()
-    if existing_code:
-        return render_template('add_new_department.html', error=f'Department code {dept_code} already exists!')
-    
-    existing_admin = Staff.query.filter_by(name=admin_name).first()
-    if existing_admin:
-        return render_template('add_new_department.html', error=f'Admin name {admin_name} already exists!')
-    
-    try:
-        department = Department(name=dept_name, code=dept_code)
-        db.session.add(department)
-        db.session.flush()
-        
-        admin = Staff(
-            name=admin_name,
-            subject=f'{dept_name} Administrator',
-            is_department_admin=True,
-            admin_department_id=department.id
-        )
-        admin.set_password(admin_password)
-        db.session.add(admin)
-        
-        default_sections = ['A', 'B', 'C']
-        for year in ['1st Year', '2nd Year', '3rd Year']:
-            for section in default_sections:
-                class_section = ClassSection(year=year, section=section, department_id=department.id)
-                db.session.add(class_section)
-        
-        default_activities = ['Sports', 'Cultural', 'Workshop', 'Seminar', 'Technical Event', 'NCC', 'NSS']
-        for activity in default_activities:
-            activity_type = ActivityType(name=activity, department_id=department.id)
-            db.session.add(activity_type)
-        
-        db.session.commit()
-        
-        return render_template('add_new_department.html', 
-                             success=f'Department {dept_name} created successfully! Admin {admin_name} can now login.')
-    except Exception as e:
-        db.session.rollback()
-        return render_template('add_new_department.html', error=f'Error: {str(e)}')
+@app.route('/head_dashboard')
+def head_dashboard():
+    departments = Department.query.all()
+    return render_template('head_dashboard.html', departments=departments)
 
-@app.route('/add_global_staff', methods=['POST'])
-def add_global_staff():
-    staff_name = request.form.get('staff_name', '').strip()
-    staff_password = request.form.get('staff_password', '').strip()
-    staff_subject = request.form.get('staff_subject', '').strip()
+@app.route('/admin_dashboard')
+def admin_dashboard():
+    # Check if coming from head dashboard via query parameter
+    dept_id_param = request.args.get('dept_id')
     
-    if not staff_name or not staff_password or not staff_subject:
-        return render_template('add_new_staff.html', error='All fields are required!')
+    if dept_id_param:
+        # Coming from head dashboard - set session for view-only access
+        department_id = int(dept_id_param)
+        session['department_id'] = department_id
+        session['role'] = 'dept_admin_viewer'
+        session['staff_id'] = None
+        session['staff_name'] = None
+    else:
+        # Check existing session
+        role = session.get('role')
+        department_id = session.get('department_id')
+        
+        # Allow both dept_admin and dept_admin_viewer roles
+        if role not in ['dept_admin', 'dept_admin_viewer']:
+            return redirect(url_for('index'))
+        
+        if not department_id:
+            return redirect(url_for('index'))
     
-    existing = Staff.query.filter_by(name=staff_name).first()
-    if existing:
-        return render_template('add_new_staff.html', error=f'Staff {staff_name} already exists!')
+    department = Department.query.get(session['department_id'])
+    if not department:
+        session.clear()
+        return redirect(url_for('index'))
     
-    try:
-        staff = Staff(
-            name=staff_name,
-            subject=staff_subject,
-            is_department_admin=False
-        )
-        staff.set_password(staff_password)
-        db.session.add(staff)
-        
-        all_departments = Department.query.all()
-        for dept in all_departments:
-            assignment = StaffDepartment(staff_id=staff.id, department_id=dept.id)
-            db.session.add(assignment)
-        
-        db.session.commit()
-        
-        return render_template('add_new_staff.html', 
-                             success=f'Staff {staff_name} added successfully! They have access to all departments.')
-    except Exception as e:
-        db.session.rollback()
-        return render_template('add_new_staff.html', error=f'Error: {str(e)}')
-
-@app.route('/get_sections/<int:department_id>/<year>')
-def get_sections(department_id, year):
-    sections = ClassSection.query.filter_by(department_id=department_id, year=year).all()
-    section_list = [s.section for s in sections]
-    return jsonify({'sections': section_list})
+    total_students = Student.query.filter_by(department_id=session['department_id']).count()
+    total_staff = StaffDepartment.query.filter_by(department_id=session['department_id']).count()
+    total_activity_types = ActivityType.query.filter_by(department_id=session['department_id']).count()
+    total_sections = ClassSection.query.filter_by(department_id=session['department_id']).count()
+    
+    students = Student.query.filter_by(department_id=session['department_id']).all()
+    
+    staff_assignments = StaffDepartment.query.filter_by(department_id=session['department_id']).all()
+    staff_ids = [sa.staff_id for sa in staff_assignments]
+    staff = Staff.query.filter(Staff.id.in_(staff_ids)).all() if staff_ids else []
+    
+    sections_by_year = {}
+    for year in ['1st Year', '2nd Year', '3rd Year']:
+        sections_by_year[year] = ClassSection.query.filter_by(
+            department_id=session['department_id'], 
+            year=year
+        ).order_by(ClassSection.section).all()
+    
+    all_sections = ClassSection.query.filter_by(department_id=session['department_id']).order_by(ClassSection.year, ClassSection.section).all()
+    
+    available_sections = {}
+    for year in ['1st Year', '2nd Year', '3rd Year']:
+        existing = [s.section for s in ClassSection.query.filter_by(department_id=session['department_id'], year=year).all()]
+        available_sections[year] = [chr(i) for i in range(ord('A'), ord('Z') + 1) if chr(i) not in existing]
+    
+    return render_template('admin_dashboard.html', 
+                         students=students, 
+                         staff=staff,
+                         total_students=total_students,
+                         total_staff=total_staff,
+                         total_activity_types=total_activity_types,
+                         total_sections=total_sections,
+                         sections_by_year=sections_by_year,
+                         all_sections=all_sections,
+                         available_sections=available_sections,
+                         department=department)
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -394,496 +413,265 @@ def login():
     departments = Department.query.all()
     return render_template('index.html', error='Invalid request', departments=departments)
 
-# ==================== ADMIN DASHBOARD ====================
+@app.route('/add_new_department_page')
+def add_new_department_page():
+    all_departments = Department.query.all()
+    dept_admins = {}
+    for dept in all_departments:
+        admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+        dept_admins[dept.id] = admin
+    return render_template('add_new_department.html', 
+                         all_departments=all_departments,
+                         dept_admins=dept_admins)
 
-@app.route('/admin_dashboard')
-def admin_dashboard():
-    if session.get('role') != 'dept_admin':
-        return redirect(url_for('index'))
-    
-    department_id = session.get('department_id')
-    if not department_id:
-        return redirect(url_for('index'))
-    
-    department = Department.query.get(department_id)
-    
-    total_students = Student.query.filter_by(department_id=department_id).count()
-    total_staff = StaffDepartment.query.filter_by(department_id=department_id).count()
-    total_activity_types = ActivityType.query.filter_by(department_id=department_id).count()
-    total_sections = ClassSection.query.filter_by(department_id=department_id).count()
-    
-    students = Student.query.filter_by(department_id=department_id).all()
-    
-    staff_assignments = StaffDepartment.query.filter_by(department_id=department_id).all()
-    staff_ids = [sa.staff_id for sa in staff_assignments]
-    staff = Staff.query.filter(Staff.id.in_(staff_ids)).all()
-    
-    sections_by_year = {}
-    for year in ['1st Year', '2nd Year', '3rd Year']:
-        sections_by_year[year] = ClassSection.query.filter_by(
-            department_id=department_id, 
-            year=year
-        ).order_by(ClassSection.section).all()
-    
-    all_sections = ClassSection.query.filter_by(department_id=department_id).order_by(ClassSection.year, ClassSection.section).all()
-    
-    available_sections = {}
-    for year in ['1st Year', '2nd Year', '3rd Year']:
-        existing = [s.section for s in ClassSection.query.filter_by(department_id=department_id, year=year).all()]
-        available_sections[year] = [chr(i) for i in range(ord('A'), ord('Z') + 1) if chr(i) not in existing]
-    
-    return render_template('admin_dashboard.html', 
-                         students=students, 
-                         staff=staff,
-                         total_students=total_students,
-                         total_staff=total_staff,
-                         total_activity_types=total_activity_types,
-                         total_sections=total_sections,
-                         sections_by_year=sections_by_year,
-                         all_sections=all_sections,
-                         available_sections=available_sections,
-                         department=department)
+@app.route('/add_new_staff_page')
+def add_new_staff_page():
+    all_staff = Staff.query.filter_by(is_department_admin=False).all()
+    return render_template('add_new_staff.html', all_staff=all_staff)
 
-@app.route('/add_section', methods=['POST'])
-def add_section():
-    if session.get('role') != 'dept_admin':
-        return jsonify({'success': False, 'error': 'Unauthorized'})
+@app.route('/add_department', methods=['POST'])
+def add_department():
+    dept_name = request.form.get('dept_name', '').strip()
+    dept_code = request.form.get('dept_code', '').strip().upper()
+    admin_name = request.form.get('admin_name', '').strip()
+    admin_password = request.form.get('admin_password', '').strip()
     
-    department_id = session.get('department_id')
+    if not dept_name or not dept_code or not admin_name or not admin_password:
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
+        return render_template('add_new_department.html', 
+                             error='All fields are required!',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
     
-    data = request.json
-    year = data.get('year')
-    section = data.get('section', '').strip().upper()
+    existing_dept = Department.query.filter_by(name=dept_name).first()
+    if existing_dept:
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
+        return render_template('add_new_department.html', 
+                             error=f'Department {dept_name} already exists!',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
     
-    if not year or not section:
-        return jsonify({'success': False, 'error': 'Year and section required'})
+    existing_code = Department.query.filter_by(code=dept_code).first()
+    if existing_code:
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
+        return render_template('add_new_department.html', 
+                             error=f'Department code {dept_code} already exists!',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
     
-    existing = ClassSection.query.filter_by(
-        department_id=department_id, 
-        year=year, 
-        section=section
-    ).first()
-    
-    if existing:
-        return jsonify({'success': False, 'error': f'Section {section} already exists for {year}'})
-    
-    new_section = ClassSection(year=year, section=section, department_id=department_id)
-    db.session.add(new_section)
-    db.session.commit()
-    
-    return jsonify({'success': True, 'message': f'Section {section} added for {year}'})
-
-@app.route('/delete_section', methods=['POST'])
-def delete_section():
-    if session.get('role') != 'dept_admin':
-        return jsonify({'success': False, 'error': 'Unauthorized'})
-    
-    data = request.json
-    section_id = data.get('section_id')
-    
-    section = ClassSection.query.get(section_id)
-    if not section:
-        return jsonify({'success': False, 'error': 'Section not found'})
-    
-    students_count = Student.query.filter_by(
-        department_id=section.department_id,
-        year=section.year, 
-        section=section.section
-    ).count()
-    
-    if students_count > 0:
-        return jsonify({'success': False, 'error': f'Cannot delete! {students_count} students are in this section. Move them first.'})
-    
-    db.session.delete(section)
-    db.session.commit()
-    
-    return jsonify({'success': True, 'message': f'Section {section.section} deleted for {section.year}'})
-
-@app.route('/add_student', methods=['POST'])
-def add_student():
-    if session.get('role') != 'dept_admin':
-        return redirect(url_for('index'))
-    
-    department_id = session.get('department_id')
-    
-    name = request.form.get('name', '').strip()
-    reg_no = request.form.get('register_number', '').strip()
-    year = request.form.get('year', '')
-    section = request.form.get('section', '')
-    batch = request.form.get('batch', '').strip()
-    
-    if not name or not reg_no or not year or not section or not batch:
-        session['upload_message'] = 'All fields are required!'
-        return redirect(url_for('admin_dashboard'))
-    
-    existing = Student.query.filter_by(register_number=reg_no).first()
-    if existing:
-        session['upload_message'] = f'Student {reg_no} already exists!'
-        return redirect(url_for('admin_dashboard'))
+    existing_admin = Staff.query.filter_by(name=admin_name).first()
+    if existing_admin:
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
+        return render_template('add_new_department.html', 
+                             error=f'Admin name {admin_name} already exists!',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
     
     try:
-        student = Student(
-            name=name,
-            register_number=reg_no,
-            year=year,
-            section=section,
-            batch=batch,
-            department_id=department_id
-        )
-        db.session.add(student)
+        department = Department(name=dept_name, code=dept_code)
+        db.session.add(department)
+        db.session.flush()
+        
+        admin = Staff(
+            name=admin_name,
+            is_department_admin=True,
+            admin_department_id=department.id
+            )
+        admin.set_password(admin_password)
+        db.session.add(admin)
+        
+        default_sections = ['A', 'B', 'C']
+        for year in ['1st Year', '2nd Year', '3rd Year']:
+            for section in default_sections:
+                class_section = ClassSection(year=year, section=section, department_id=department.id)
+                db.session.add(class_section)
+        
+        default_activities = ['Sports', 'Cultural', 'Workshop', 'Seminar', 'Technical Event', 'NCC', 'NSS']
+        for activity in default_activities:
+            activity_type = ActivityType(name=activity, department_id=department.id)
+            db.session.add(activity_type)
+        
         db.session.commit()
-        session['upload_message'] = f' Student {name} added successfully!'
+        
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
+        return render_template('add_new_department.html', 
+                             success=f'Department {dept_name} created successfully! Admin {admin_name} can now login.',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
     except Exception as e:
         db.session.rollback()
-        session['upload_message'] = f' Error: {str(e)}'
-    
-    return redirect(url_for('admin_dashboard'))
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
+        return render_template('add_new_department.html', 
+                             error=f'Error: {str(e)}',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
 
-@app.route('/upload_students', methods=['POST'])
-def upload_students():
-    if session.get('role') != 'dept_admin':
-        return redirect(url_for('index'))
+@app.route('/add_global_staff', methods=['POST'])
+def add_global_staff():
+    staff_name = request.form.get('staff_name', '').strip()
+    staff_password = request.form.get('staff_password', '').strip()
+    subjects_str = request.form.get('subjects', '').strip()
     
-    department_id = session.get('department_id')
+    if not staff_name or not staff_password or not subjects_str:
+        all_staff = Staff.query.filter_by(is_department_admin=False).all()
+        return render_template('add_new_staff.html', 
+                             error='All fields are required!',
+                             all_staff=all_staff)
     
-    if 'file' not in request.files:
-        session['upload_message'] = 'No file selected'
-        return redirect(url_for('admin_dashboard'))
+    subjects_list = [s.strip() for s in subjects_str.split(',') if s.strip()]
     
-    file = request.files['file']
-    year = request.form['year']
-    section = request.form['section']
+    if not subjects_list:
+        all_staff = Staff.query.filter_by(is_department_admin=False).all()
+        return render_template('add_new_staff.html', 
+                             error='At least one subject is required!',
+                             all_staff=all_staff)
     
-    if file.filename == '':
-        session['upload_message'] = 'No file selected'
-        return redirect(url_for('admin_dashboard'))
+    existing = Staff.query.filter_by(name=staff_name).first()
+    if existing:
+        all_staff = Staff.query.filter_by(is_department_admin=False).all()
+        return render_template('add_new_staff.html', 
+                             error=f'Staff {staff_name} already exists!',
+                             all_staff=all_staff)
     
-    if file and allowed_file(file.filename):
-        try:
-            if file.filename.endswith('.csv'):
-                df = pd.read_csv(file)
-            else:
-                df = pd.read_excel(file)
-            
-            if 'name' not in df.columns or 'register_number' not in df.columns:
-                session['upload_message'] = 'File must have columns: name, register_number'
-                return redirect(url_for('admin_dashboard'))
-            
-            existing_students = Student.query.filter_by(
-                department_id=department_id,
-                year=year, 
-                section=section
-            ).all()
-            existing_reg_numbers = [s.register_number for s in existing_students]
-            
-            added_count = 0
-            skipped_count = 0
-            
-            for _, row in df.iterrows():
-                name = str(row['name']).strip()
-                reg_no = str(row['register_number']).strip()
-                batch = row['batch'] if 'batch' in df.columns else f"{year[:2]}22-{int(year[:2])+3}25"
-                
-                if reg_no not in existing_reg_numbers and name:
-                    student = Student(
-                        name=name,
-                        register_number=reg_no,
-                        year=year,
-                        section=section,
-                        batch=str(batch),
-                        department_id=department_id
-                    )
-                    db.session.add(student)
-                    added_count += 1
-                else:
-                    skipped_count += 1
-            
-            db.session.commit()
-            session['upload_message'] = f' Added {added_count} students. Skipped {skipped_count} duplicates.'
-            
-        except Exception as e:
-            session['upload_message'] = f' Error: {str(e)}'
-    
-    return redirect(url_for('admin_dashboard'))
+    try:
+        staff = Staff(
+            name=staff_name,
+            is_department_admin=False
+        )
+        staff.set_password(staff_password)
+        db.session.add(staff)
+        db.session.flush()
+        
+        for subject in subjects_list:
+            staff_subject = StaffSubject(staff_id=staff.id, subject=subject)
+            db.session.add(staff_subject)
+        
+        all_departments = Department.query.all()
+        for dept in all_departments:
+            assignment = StaffDepartment(staff_id=staff.id, department_id=dept.id)
+            db.session.add(assignment)
+        
+        db.session.commit()
+        
+        all_staff = Staff.query.filter_by(is_department_admin=False).all()
+        return render_template('add_new_staff.html', 
+                             success=f'Staff {staff_name} added successfully! Subjects: {", ".join(subjects_list)}',
+                             all_staff=all_staff)
+    except Exception as e:
+        db.session.rollback()
+        all_staff = Staff.query.filter_by(is_department_admin=False).all()
+        return render_template('add_new_staff.html', 
+                             error=f'Error: {str(e)}',
+                             all_staff=all_staff)
 
-@app.route('/delete_student/<int:student_id>')
-def delete_student(student_id):
-    if session.get('role') != 'dept_admin':
-        return redirect(url_for('index'))
-    
-    student = Student.query.get_or_404(student_id)
-    year = student.year
-    section = student.section
-    
-    Attendance.query.filter_by(student_id=student_id).delete()
-    Extracurricular.query.filter_by(student_id=student_id).delete()
-    db.session.delete(student)
-    db.session.commit()
-    
-    return redirect(url_for('view_class', year=year, section=section))
-
-# ==================== STAFF MANAGEMENT ====================
-
-@app.route('/delete_staff/<int:staff_id>')
-def delete_staff(staff_id):
-    if session.get('role') != 'dept_admin':
-        return redirect(url_for('index'))
-    
+@app.route('/delete_global_staff/<int:staff_id>')
+def delete_global_staff(staff_id):
     staff = Staff.query.get_or_404(staff_id)
     
     if staff.is_department_admin:
-        session['upload_message'] = 'Cannot delete department admin!'
-        return redirect(url_for('admin_dashboard'))
+        all_staff = Staff.query.filter_by(is_department_admin=False).all()
+        return render_template('add_new_staff.html', 
+                             error=f'Cannot delete department admin!',
+                             all_staff=all_staff)
     
     StaffDepartment.query.filter_by(staff_id=staff_id).delete()
+    StaffSubject.query.filter_by(staff_id=staff_id).delete()
     db.session.delete(staff)
     db.session.commit()
     
-    session['upload_message'] = f' Staff member {staff.name} deleted successfully!'
-    return redirect(url_for('admin_dashboard'))
+    all_staff = Staff.query.filter_by(is_department_admin=False).all()
+    return render_template('add_new_staff.html', 
+                         success=f'Staff {staff.name} deleted successfully!',
+                         all_staff=all_staff)
 
-# ==================== EC ACTIVITY TYPES MANAGEMENT ====================
-
-@app.route('/ec_types', methods=['GET', 'POST'])
-def ec_types():
-    if session.get('role') != 'dept_admin':
-        return redirect(url_for('index'))
+@app.route('/delete_department/<int:dept_id>')
+def delete_department(dept_id):
+    department = Department.query.get_or_404(dept_id)
     
-    department_id = session.get('department_id')
+    students_count = Student.query.filter_by(department_id=dept_id).count()
+    if students_count > 0:
+        all_departments = Department.query.all()
+        dept_admins = {}
+        for dept in all_departments:
+            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+            dept_admins[dept.id] = admin
+        return render_template('add_new_department.html', 
+                             error=f'Cannot delete! {students_count} students are in this department. Delete or move them first.',
+                             all_departments=all_departments,
+                             dept_admins=dept_admins)
     
-    if request.method == 'POST':
-        name = request.form.get('activity_name')
-        description = request.form.get('description')
-        
-        if name:
-            existing = ActivityType.query.filter_by(name=name, department_id=department_id).first()
-            if existing:
-                session['ec_message'] = f'Activity type "{name}" already exists!'
-            else:
-                activity_type = ActivityType(name=name, description=description, department_id=department_id)
-                db.session.add(activity_type)
-                db.session.commit()
-                session['ec_message'] = f'Activity type "{name}" added successfully!'
+    admin = Staff.query.filter_by(admin_department_id=dept_id, is_department_admin=True).first()
+    if admin:
+        db.session.delete(admin)
     
-    activities = ActivityType.query.filter_by(department_id=department_id).order_by(ActivityType.name).all()
-    return render_template('ec_types.html', activities=activities)
-
-@app.route('/delete_activity_type/<int:activity_id>')
-def delete_activity_type(activity_id):
-    if session.get('role') != 'dept_admin':
-        return redirect(url_for('index'))
-    
-    activity = ActivityType.query.get_or_404(activity_id)
-    name = activity.name
-    db.session.delete(activity)
+    ClassSection.query.filter_by(department_id=dept_id).delete()
+    ActivityType.query.filter_by(department_id=dept_id).delete()
+    StaffDepartment.query.filter_by(department_id=dept_id).delete()
+    db.session.delete(department)
     db.session.commit()
-    session['ec_message'] = f'Activity type "{name}" deleted successfully!'
-    return redirect(url_for('ec_types'))
+    
+    all_departments = Department.query.all()
+    dept_admins = {}
+    for dept in all_departments:
+        admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
+        dept_admins[dept.id] = admin
+    
+    return render_template('add_new_department.html', 
+                         success=f'Department {department.name} deleted successfully!',
+                         all_departments=all_departments,
+                         dept_admins=dept_admins)
 
-# ==================== ALL EC ACTIVITIES VIEW ====================
-
-@app.route('/all_ec_activities')
-def all_ec_activities():
-    if session.get('role') != 'dept_admin':
-        return redirect(url_for('index'))
-    
-    department_id = session.get('department_id')
-    
-    all_activities = Extracurricular.query.filter(
-        ~Extracurricular.notes.like('OD_%')
-    ).join(Student).filter(Student.department_id == department_id).order_by(Extracurricular.activity_date.desc()).all()
-    
-    grouped_data = {}
-    
-    for activity in all_activities:
-        student = activity.student
-        if not student:
-            continue
-            
-        year = student.year
-        section = student.section
-        key = f"{year} - Section {section}"
-        
-        if key not in grouped_data:
-            grouped_data[key] = {
-                'year': year,
-                'section': section,
-                'activities': []
-            }
-        
-        grouped_data[key]['activities'].append({
-            'student_name': student.name,
-            'register_number': student.register_number,
-            'activity_type': activity.activity_type.name if activity.activity_type else 'Unknown',
-            'activity_name': activity.notes if activity.notes else activity.activity_type.name,
-            'activity_date': activity.activity_date,
-            'batch': student.batch
-        })
-    
-    activity_types = ActivityType.query.filter_by(department_id=department_id).order_by(ActivityType.name).all()
-    
-    return render_template('all_ec_activities.html', 
-                         grouped_data=grouped_data,
-                         activity_types=activity_types)
-
-# ==================== OD BY DATE VIEW ====================
-
-@app.route('/od_by_date', methods=['GET', 'POST'])
-def od_by_date():
-    if session.get('role') != 'dept_admin':
-        return redirect(url_for('index'))
-    
-    department_id = session.get('department_id')
-    
-    students_with_od = []
-    selected_date = None
-    
-    if request.method == 'POST':
-        date_str = request.form.get('date')
-        if date_str:
-            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-            
-            od_activities = Extracurricular.query.filter(
-                Extracurricular.notes.like('OD_%'),
-                Extracurricular.activity_date == selected_date
-            ).join(Student).filter(Student.department_id == department_id).all()
-            
-            student_od_map = {}
-            for activity in od_activities:
-                if activity.student_id not in student_od_map:
-                    student_od_map[activity.student_id] = []
-                student_od_map[activity.student_id].append(activity)
-            
-            for student_id, activities in student_od_map.items():
-                student = Student.query.get(student_id)
-                if student:
-                    od_details = []
-                    for act in activities:
-                        attendance = Attendance.query.filter_by(
-                            student_id=student.id,
-                            date=selected_date,
-                            status='present'
-                        ).first()
-                        
-                        period_found = None
-                        if attendance:
-                            period_found = attendance.period
-                        else:
-                            attendances = Attendance.query.filter_by(
-                                student_id=student.id,
-                                date=selected_date
-                            ).all()
-                            for att in attendances:
-                                if att.status == 'present':
-                                    period_found = att.period
-                                    break
-                        
-                        od_details.append({
-                            'activity_name': act.notes.replace('OD_', ''),
-                            'activity_type': act.activity_type.name if act.activity_type else 'General',
-                            'period': period_found if period_found else 'Unknown'
-                        })
-                    
-                    students_with_od.append({
-                        'id': student.id,
-                        'name': student.name,
-                        'register_number': student.register_number,
-                        'year': student.year,
-                        'section': student.section,
-                        'batch': student.batch,
-                        'od_details': od_details
-                    })
-    
-    return render_template('od_by_date.html', 
-                         students=students_with_od, 
-                         selected_date=selected_date)
-
-# ==================== STUDENT EC ACTIVITIES ====================
-
-@app.route('/ec_activity/<int:student_id>/<year>/<section>', methods=['GET', 'POST'])
-def ec_activity(student_id, year, section):
-    if session.get('role') != 'dept_admin':
-        return redirect(url_for('index'))
-    
-    student = Student.query.get_or_404(student_id)
-    department_id = session.get('department_id')
-    activity_types = ActivityType.query.filter_by(department_id=department_id).order_by(ActivityType.name).all()
-    
-    if request.method == 'POST':
-        activity_type_id = request.form.get('activity_type_id')
-        
-        if activity_type_id:
-            activity_type = ActivityType.query.get(activity_type_id)
-            
-            existing = Extracurricular.query.filter_by(
-                student_id=student.id,
-                activity_type_id=activity_type_id
-            ).first()
-            
-            if existing:
-                session['ec_error'] = f'{student.name} already has "{activity_type.name}" activity!'
-                return redirect(url_for('ec_activity', student_id=student.id, year=year, section=section))
-            
-            notes = ''
-            if activity_type.name.lower() == 'sports':
-                sport_name = request.form.get('sport_name')
-                if sport_name:
-                    notes = f'Sport : {sport_name}'
-                    existing_sport = Extracurricular.query.filter(
-                        Extracurricular.student_id == student.id,
-                        Extracurricular.notes == notes
-                    ).first()
-                    if existing_sport:
-                        session['ec_error'] = f'{student.name} already has "{sport_name}" sport activity!'
-                        return redirect(url_for('ec_activity', student_id=student.id, year=year, section=section))
-                else:
-                    notes = 'Sports'
-            else:
-                notes = activity_type.name
-            
-            activity_date = datetime.now().date()
-            
-            ec_activity = Extracurricular(
-                student_id=student.id,
-                activity_type_id=activity_type_id,
-                activity_date=activity_date,
-                notes=notes
-            )
-            db.session.add(ec_activity)
-            db.session.commit()
-            session['ec_message'] = f'EC Activity added for {student.name}!'
-            
-            return redirect(url_for('view_class', year=year, section=section))
-    
-    return render_template('ec_activity.html',
-                         student=student,
-                         year=year,
-                         section=section,
-                         activity_types=activity_types)
-
-@app.route('/delete_student_ec', methods=['POST'])
-def delete_student_ec():
-    if session.get('role') != 'dept_admin':
-        return jsonify({'success': False, 'error': 'Unauthorized'})
-    
+@app.route('/change_staff_password', methods=['POST'])
+def change_staff_password():
     data = request.json
-    activity_id = data.get('activity_id')
+    entity_type = data.get('type')
+    entity_id = data.get('id')
+    new_password = data.get('new_password')
     
-    if not activity_id:
-        return jsonify({'success': False, 'error': 'Activity ID required'})
+    if not new_password or len(new_password) < 6:
+        return jsonify({'success': False, 'error': 'Password must be at least 6 characters'})
     
     try:
-        activity = Extracurricular.query.filter_by(id=activity_id).first()
+        staff = Staff.query.get(entity_id)
+        if not staff:
+            return jsonify({'success': False, 'error': 'Staff not found'})
+        staff.set_password(new_password)
         
-        if not activity:
-            return jsonify({'success': False, 'error': 'Activity not found'})
-        
-        db.session.delete(activity)
         db.session.commit()
-        
-        return jsonify({'success': True, 'message': 'Activity deleted successfully'})
+        return jsonify({'success': True, 'message': 'Password changed successfully'})
     except Exception as e:
+        db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/get_sections/<int:department_id>/<year>')
+def get_sections(department_id, year):
+    sections = ClassSection.query.filter_by(department_id=department_id, year=year).all()
+    section_list = [s.section for s in sections]
+    return jsonify({'sections': section_list})
 
 # ==================== STAFF ROUTES ====================
 
@@ -894,13 +682,16 @@ def staff_dashboard():
     
     year = session.get('year')
     section = session.get('section')
-    subject = session.get('subject')
     period = session.get('period')
     department_id = session.get('department_id')
+    staff_id = session.get('staff_id')
     
     if not department_id:
         departments = Department.query.all()
         return render_template('index.html', error='Please select a department', departments=departments)
+    
+    staff = Staff.query.get(staff_id)
+    staff_subjects = staff.get_subjects_list() if staff else []
     
     students = Student.query.filter_by(
         department_id=department_id,
@@ -942,9 +733,9 @@ def staff_dashboard():
                          students=students,
                          attendance_dict=attendance_dict,
                          staff_name=session.get('staff_name'),
+                         staff_subjects=staff_subjects,
                          year=year,
                          section=section,
-                         subject=subject,
                          period=period,
                          today=today.strftime('%Y-%m-%d'),
                          has_unsaved_changes=has_unsaved_changes,
@@ -997,6 +788,27 @@ def staff_mark_od():
         staff_id = session.get('staff_id')
         subject = session.get('subject')
         
+        # Check if OD already marked for this student on this date
+        existing_od = Extracurricular.query.filter(
+            Extracurricular.student_id == student.id,
+            Extracurricular.activity_date == current_date,
+            Extracurricular.notes.like('OD_%')
+        ).first()
+        
+        if existing_od:
+            return jsonify({'success': False, 'error': f'OD already marked for {student.name} on this date!'})
+        
+        # Check if attendance already exists for this period
+        existing_attendance = Attendance.query.filter_by(
+            student_id=student.id,
+            date=current_date,
+            period=current_period
+        ).first()
+        
+        if existing_attendance and existing_attendance.status == 'present':
+            return jsonify({'success': False, 'error': f'Student already marked PRESENT for Period {current_period}!'})
+        
+        # Create OD activity record
         od_activity = Extracurricular(
             student_id=student.id,
             activity_type_id=activity_type_id,
@@ -1005,17 +817,12 @@ def staff_mark_od():
         )
         db.session.add(od_activity)
         
-        existing = Attendance.query.filter_by(
-            student_id=student.id,
-            date=current_date,
-            period=current_period
-        ).first()
-        
-        if existing:
-            existing.status = 'present'
-            existing.marked_by = staff_id
-            existing.subject = subject
-            existing.marked_at = datetime.now()
+        # Create or update attendance
+        if existing_attendance:
+            existing_attendance.status = 'present'
+            existing_attendance.marked_by = staff_id
+            existing_attendance.subject = subject
+            existing_attendance.marked_at = datetime.now()
         else:
             attendance = Attendance(
                 student_id=student.id,
@@ -1045,35 +852,50 @@ def save_attendance():
     subject = session.get('subject')
     period = session.get('period')
     
+    if not temp_attendance:
+        session.clear()
+        return redirect(url_for('index'))
+    
+    saved_count = 0
+    skipped_count = 0
+    
     for student_id_str, periods in temp_attendance.items():
         student_id = int(student_id_str)
         for period_str, status in periods.items():
-            period = int(period_str)
+            period_val = int(period_str)
             
+            # Check if attendance already exists (prevent duplicate)
             attendance = Attendance.query.filter_by(
                 student_id=student_id,
                 date=today,
-                period=period
+                period=period_val
             ).first()
             
             if attendance:
+                # Update existing
                 attendance.status = status
                 attendance.marked_by = staff_id
                 attendance.subject = subject
                 attendance.marked_at = datetime.now()
+                saved_count += 1
             else:
+                # Create new
                 attendance = Attendance(
                     student_id=student_id,
                     date=today,
-                    period=period,
+                    period=period_val,
                     status=status,
                     subject=subject,
                     marked_by=staff_id
                 )
                 db.session.add(attendance)
+                saved_count += 1
     
     db.session.commit()
+    
+    # Clear session and show success message
     session.clear()
+    flash(f'✅ Attendance saved successfully! {saved_count} record(s) updated.', 'success')
     
     return redirect(url_for('index'))
 
@@ -1157,7 +979,8 @@ def student_dashboard():
 
 @app.route('/view_class/<year>/<section>')
 def view_class(year, section):
-    if session.get('role') != 'dept_admin':
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
         return redirect(url_for('index'))
     
     department_id = session.get('department_id')
@@ -1209,7 +1032,8 @@ def view_class(year, section):
 
 @app.route('/student_attendance_details/<int:student_id>/<year>/<section>')
 def student_attendance_details(student_id, year, section):
-    if session.get('role') != 'dept_admin':
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
         return redirect(url_for('index'))
     
     student = Student.query.get_or_404(student_id)
@@ -1272,7 +1096,8 @@ def student_attendance_details(student_id, year, section):
 
 @app.route('/manage_attendance/<int:student_id>/<year>/<section>')
 def manage_attendance(student_id, year, section):
-    if session.get('role') != 'dept_admin':
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
         return redirect(url_for('index'))
     
     student = Student.query.get_or_404(student_id)
@@ -1297,7 +1122,8 @@ def manage_attendance(student_id, year, section):
 
 @app.route('/edit_attendance/<int:attendance_id>', methods=['GET', 'POST'])
 def edit_attendance(attendance_id):
-    if session.get('role') != 'dept_admin':
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
         return redirect(url_for('index'))
     
     attendance = Attendance.query.get_or_404(attendance_id)
@@ -1312,7 +1138,7 @@ def edit_attendance(attendance_id):
         attendance.marked_at = datetime.now()
         
         db.session.commit()
-        session['attendance_message'] = f' Attendance updated for {student.name} on {attendance.date.strftime("%d-%m-%Y")} Period {attendance.period}'
+        session['attendance_message'] = f'✅ Attendance updated for {student.name} on {attendance.date.strftime("%d-%m-%Y")} Period {attendance.period}'
         
         return redirect(url_for('manage_attendance', student_id=student.id, year=student.year, section=student.section))
     
@@ -1323,7 +1149,8 @@ def edit_attendance(attendance_id):
 
 @app.route('/delete_attendance/<int:attendance_id>')
 def delete_attendance(attendance_id):
-    if session.get('role') != 'dept_admin':
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
         return redirect(url_for('index'))
     
     attendance = Attendance.query.get_or_404(attendance_id)
@@ -1334,13 +1161,14 @@ def delete_attendance(attendance_id):
     db.session.delete(attendance)
     db.session.commit()
     
-    session['attendance_message'] = f' Attendance record deleted for {student.name} on {attendance.date.strftime("%d-%m-%Y")} Period {attendance.period}'
+    session['attendance_message'] = f'✅ Attendance record deleted for {student.name} on {attendance.date.strftime("%d-%m-%Y")} Period {attendance.period}'
     
     return redirect(url_for('manage_attendance', student_id=student.id, year=year, section=section))
 
 @app.route('/add_custom_attendance/<int:student_id>/<year>/<section>', methods=['GET', 'POST'])
 def add_custom_attendance(student_id, year, section):
-    if session.get('role') != 'dept_admin':
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
         return redirect(url_for('index'))
     
     student = Student.query.get_or_404(student_id)
@@ -1363,7 +1191,7 @@ def add_custom_attendance(student_id, year, section):
             ).first()
             
             if existing:
-                session['attendance_message'] = f' Attendance already exists for {student.name} on {date_str} Period {period}! Use Edit instead.'
+                session['attendance_message'] = f'⚠️ Attendance already exists for {student.name} on {date_str} Period {period}! Use Edit instead.'
                 return redirect(url_for('manage_attendance', student_id=student.id, year=year, section=section))
             
             attendance = Attendance(
@@ -1377,10 +1205,10 @@ def add_custom_attendance(student_id, year, section):
             db.session.add(attendance)
             db.session.commit()
             
-            session['attendance_message'] = f' Custom attendance added for {student.name} on {date_str} Period {period}'
+            session['attendance_message'] = f'✅ Custom attendance added for {student.name} on {date_str} Period {period}'
             
         except Exception as e:
-            session['attendance_message'] = f' Error: {str(e)}'
+            session['attendance_message'] = f'❌ Error: {str(e)}'
         
         return redirect(url_for('manage_attendance', student_id=student.id, year=year, section=section))
     
@@ -1392,7 +1220,8 @@ def add_custom_attendance(student_id, year, section):
 
 @app.route('/add_previous_attendance/<int:student_id>', methods=['GET', 'POST'])
 def add_previous_attendance(student_id):
-    if session.get('role') != 'dept_admin':
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
         return redirect(url_for('index'))
     
     student = Student.query.get_or_404(student_id)
@@ -1415,7 +1244,7 @@ def add_previous_attendance(student_id):
             ).first()
             
             if existing:
-                session['attendance_message'] = f' Attendance already exists for {student.name} on {date_str} Period {period}!'
+                session['attendance_message'] = f'⚠️ Attendance already exists for {student.name} on {date_str} Period {period}!'
                 return redirect(url_for('view_class', year=student.year, section=student.section))
             
             attendance = Attendance(
@@ -1429,10 +1258,10 @@ def add_previous_attendance(student_id):
             db.session.add(attendance)
             db.session.commit()
             
-            session['attendance_message'] = f' Previous attendance added for {student.name} on {date_str} Period {period}'
+            session['attendance_message'] = f'✅ Previous attendance added for {student.name} on {date_str} Period {period}'
             
         except Exception as e:
-            session['attendance_message'] = f' Error: {str(e)}'
+            session['attendance_message'] = f'❌ Error: {str(e)}'
         
         return redirect(url_for('view_class', year=student.year, section=student.section))
     
@@ -1442,7 +1271,8 @@ def add_previous_attendance(student_id):
 
 @app.route('/add_new_date_attendance/<int:student_id>/<year>/<section>', methods=['GET', 'POST'])
 def add_new_date_attendance(student_id, year, section):
-    if session.get('role') != 'dept_admin':
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
         return redirect(url_for('index'))
     
     student = Student.query.get_or_404(student_id)
@@ -1465,7 +1295,7 @@ def add_new_date_attendance(student_id, year, section):
             ).first()
             
             if existing:
-                session['attendance_message'] = f' Attendance already exists for {student.name} on {date_str} Period {period}!'
+                session['attendance_message'] = f'⚠️ Attendance already exists for {student.name} on {date_str} Period {period}!'
                 return redirect(url_for('view_class', year=year, section=section))
             
             attendance = Attendance(
@@ -1479,10 +1309,10 @@ def add_new_date_attendance(student_id, year, section):
             db.session.add(attendance)
             db.session.commit()
             
-            session['attendance_message'] = f' Attendance added for {student.name} on {date_str} Period {period}'
+            session['attendance_message'] = f'✅ Attendance added for {student.name} on {date_str} Period {period}'
             
         except Exception as e:
-            session['attendance_message'] = f' Error: {str(e)}'
+            session['attendance_message'] = f'❌ Error: {str(e)}'
         
         return redirect(url_for('view_class', year=year, section=section))
     
@@ -1494,7 +1324,8 @@ def add_new_date_attendance(student_id, year, section):
 
 @app.route('/print_attendance/<year>/<section>')
 def print_attendance(year, section):
-    if session.get('role') != 'dept_admin':
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
         return redirect(url_for('index'))
     
     department_id = session.get('department_id')
@@ -1519,43 +1350,10 @@ def print_attendance(year, section):
                          students=summary,
                          print_date=datetime.now().strftime('%d-%m-%Y %H:%M'))
 
-# Store admin password in a file or database (for persistence)
-ADMIN_PASSWORD = 'admin123'  # Default password
-
-@app.route('/change_admin_password', methods=['POST'])
-def change_admin_password():
-    data = request.json
-    current_password = data.get('current_password')
-    new_password = data.get('new_password')
-    
-    global ADMIN_PASSWORD
-    
-    if current_password != ADMIN_PASSWORD:
-        return jsonify({'success': False, 'error': 'Current password is incorrect'})
-    
-    if not new_password or len(new_password) < 6:
-        return jsonify({'success': False, 'error': 'Password must be at least 6 characters'})
-    
-    ADMIN_PASSWORD = new_password
-    
-    # Optionally save to a file for persistence across server restarts
-    try:
-        with open('admin_password.txt', 'w') as f:
-            f.write(ADMIN_PASSWORD)
-        return jsonify({'success': True, 'message': 'Password changed successfully'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
-
-# Load saved password on startup
-try:
-    with open('admin_password.txt', 'r') as f:
-        ADMIN_PASSWORD = f.read().strip()
-except:
-    pass
-
 @app.route('/change_password', methods=['GET', 'POST'])
 def change_password():
-    if session.get('role') != 'dept_admin':
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
         return redirect(url_for('index'))
     
     if request.method == 'POST':
@@ -1566,21 +1364,21 @@ def change_password():
         admin = Staff.query.get(session.get('staff_id'))
         
         if not admin.check_password(current_password):
-            session['password_message'] = ' Current password is incorrect!'
+            session['password_message'] = '❌ Current password is incorrect!'
             return redirect(url_for('change_password'))
         
         if new_password != confirm_password:
-            session['password_message'] = ' New passwords do not match!'
+            session['password_message'] = '❌ New passwords do not match!'
             return redirect(url_for('change_password'))
         
         if len(new_password) < 6:
-            session['password_message'] = ' Password must be at least 6 characters!'
+            session['password_message'] = '❌ Password must be at least 6 characters!'
             return redirect(url_for('change_password'))
         
         admin.set_password(new_password)
         db.session.commit()
         session.clear()
-        flash(' Password changed successfully! Please login with your new password.', 'success')
+        flash('✅ Password changed successfully! Please login with your new password.', 'success')
         
         return redirect(url_for('index'))
     
@@ -1588,7 +1386,8 @@ def change_password():
 
 @app.route('/monthly_attendance/<year>/<section>')
 def monthly_attendance(year, section):
-    if session.get('role') != 'dept_admin':
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
         return redirect(url_for('index'))
     
     department_id = session.get('department_id')
@@ -1669,7 +1468,8 @@ def monthly_attendance(year, section):
 
 @app.route('/monthly_attendance_detail/<year>/<section>/<month_key>')
 def monthly_attendance_detail(year, section, month_key):
-    if session.get('role') != 'dept_admin':
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
         return redirect(url_for('index'))
     
     department_id = session.get('department_id')
@@ -1740,112 +1540,435 @@ def monthly_attendance_detail(year, section, month_key):
                          student_attendance=student_attendance,
                          students=students)
 
+@app.route('/ec_types', methods=['GET', 'POST'])
+def ec_types():
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return redirect(url_for('index'))
+    
+    department_id = session.get('department_id')
+    
+    if request.method == 'POST':
+        name = request.form.get('activity_name')
+        description = request.form.get('description')
+        
+        if name:
+            existing = ActivityType.query.filter_by(name=name, department_id=department_id).first()
+            if existing:
+                session['ec_message'] = f'⚠️ Activity type "{name}" already exists!'
+            else:
+                activity_type = ActivityType(name=name, description=description, department_id=department_id)
+                db.session.add(activity_type)
+                db.session.commit()
+                session['ec_message'] = f'✅ Activity type "{name}" added successfully!'
+    
+    activities = ActivityType.query.filter_by(department_id=department_id).order_by(ActivityType.name).all()
+    return render_template('ec_types.html', activities=activities)
+
+@app.route('/delete_activity_type/<int:activity_id>')
+def delete_activity_type(activity_id):
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return redirect(url_for('index'))
+    
+    activity = ActivityType.query.get_or_404(activity_id)
+    name = activity.name
+    db.session.delete(activity)
+    db.session.commit()
+    session['ec_message'] = f'✅ Activity type "{name}" deleted successfully!'
+    return redirect(url_for('ec_types'))
+
+@app.route('/all_ec_activities')
+def all_ec_activities():
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return redirect(url_for('index'))
+    
+    department_id = session.get('department_id')
+    
+    all_activities = Extracurricular.query.filter(
+        ~Extracurricular.notes.like('OD_%')
+    ).join(Student).filter(Student.department_id == department_id).order_by(Extracurricular.activity_date.desc()).all()
+    
+    grouped_data = {}
+    
+    for activity in all_activities:
+        student = activity.student
+        if not student:
+            continue
+            
+        year = student.year
+        section = student.section
+        key = f"{year} - Section {section}"
+        
+        if key not in grouped_data:
+            grouped_data[key] = {
+                'year': year,
+                'section': section,
+                'activities': []
+            }
+        
+        grouped_data[key]['activities'].append({
+            'student_name': student.name,
+            'register_number': student.register_number,
+            'activity_type': activity.activity_type.name if activity.activity_type else 'Unknown',
+            'activity_name': activity.notes if activity.notes else activity.activity_type.name,
+            'activity_date': activity.activity_date,
+            'batch': student.batch
+        })
+    
+    activity_types = ActivityType.query.filter_by(department_id=department_id).order_by(ActivityType.name).all()
+    
+    return render_template('all_ec_activities.html', 
+                         grouped_data=grouped_data,
+                         activity_types=activity_types)
+
+@app.route('/od_by_date', methods=['GET', 'POST'])
+def od_by_date():
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return redirect(url_for('index'))
+    
+    department_id = session.get('department_id')
+    
+    students_with_od = []
+    selected_date = None
+    
+    if request.method == 'POST':
+        date_str = request.form.get('date')
+        if date_str:
+            selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+            
+            od_activities = Extracurricular.query.filter(
+                Extracurricular.notes.like('OD_%'),
+                Extracurricular.activity_date == selected_date
+            ).join(Student).filter(Student.department_id == department_id).all()
+            
+            student_od_map = {}
+            for activity in od_activities:
+                if activity.student_id not in student_od_map:
+                    student_od_map[activity.student_id] = []
+                student_od_map[activity.student_id].append(activity)
+            
+            for student_id, activities in student_od_map.items():
+                student = Student.query.get(student_id)
+                if student:
+                    od_details = []
+                    for act in activities:
+                        attendance = Attendance.query.filter_by(
+                            student_id=student.id,
+                            date=selected_date,
+                            status='present'
+                        ).first()
+                        
+                        period_found = None
+                        if attendance:
+                            period_found = attendance.period
+                        else:
+                            attendances = Attendance.query.filter_by(
+                                student_id=student.id,
+                                date=selected_date
+                            ).all()
+                            for att in attendances:
+                                if att.status == 'present':
+                                    period_found = att.period
+                                    break
+                        
+                        od_details.append({
+                            'activity_name': act.notes.replace('OD_', ''),
+                            'activity_type': act.activity_type.name if act.activity_type else 'General',
+                            'period': period_found if period_found else 'Unknown'
+                        })
+                    
+                    students_with_od.append({
+                        'id': student.id,
+                        'name': student.name,
+                        'register_number': student.register_number,
+                        'year': student.year,
+                        'section': student.section,
+                        'batch': student.batch,
+                        'od_details': od_details
+                    })
+    
+    return render_template('od_by_date.html', 
+                         students=students_with_od, 
+                         selected_date=selected_date)
+
+@app.route('/ec_activity/<int:student_id>/<year>/<section>', methods=['GET', 'POST'])
+def ec_activity(student_id, year, section):
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return redirect(url_for('index'))
+    
+    student = Student.query.get_or_404(student_id)
+    department_id = session.get('department_id')
+    activity_types = ActivityType.query.filter_by(department_id=department_id).order_by(ActivityType.name).all()
+    
+    if request.method == 'POST':
+        activity_type_id = request.form.get('activity_type_id')
+        
+        if activity_type_id:
+            activity_type = ActivityType.query.get(activity_type_id)
+            
+            existing = Extracurricular.query.filter_by(
+                student_id=student.id,
+                activity_type_id=activity_type_id
+            ).first()
+            
+            if existing:
+                session['ec_error'] = f'{student.name} already has "{activity_type.name}" activity!'
+                return redirect(url_for('ec_activity', student_id=student.id, year=year, section=section))
+            
+            notes = ''
+            if activity_type.name.lower() == 'sports':
+                sport_name = request.form.get('sport_name')
+                if sport_name:
+                    notes = f'Sport : {sport_name}'
+                    existing_sport = Extracurricular.query.filter(
+                        Extracurricular.student_id == student.id,
+                        Extracurricular.notes == notes
+                    ).first()
+                    if existing_sport:
+                        session['ec_error'] = f'{student.name} already has "{sport_name}" sport activity!'
+                        return redirect(url_for('ec_activity', student_id=student.id, year=year, section=section))
+                else:
+                    notes = 'Sports'
+            else:
+                notes = activity_type.name
+            
+            activity_date = datetime.now().date()
+            
+            ec_activity = Extracurricular(
+                student_id=student.id,
+                activity_type_id=activity_type_id,
+                activity_date=activity_date,
+                notes=notes
+            )
+            db.session.add(ec_activity)
+            db.session.commit()
+            session['ec_message'] = f'✅ EC Activity added for {student.name}!'
+            
+            return redirect(url_for('view_class', year=year, section=section))
+    
+    return render_template('ec_activity.html',
+                         student=student,
+                         year=year,
+                         section=section,
+                         activity_types=activity_types)
+
+@app.route('/delete_student_ec', methods=['POST'])
+def delete_student_ec():
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    
+    data = request.json
+    activity_id = data.get('activity_id')
+    
+    if not activity_id:
+        return jsonify({'success': False, 'error': 'Activity ID required'})
+    
+    try:
+        activity = Extracurricular.query.filter_by(id=activity_id).first()
+        
+        if not activity:
+            return jsonify({'success': False, 'error': 'Activity not found'})
+        
+        db.session.delete(activity)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Activity deleted successfully'})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/add_section', methods=['POST'])
+def add_section():
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    
+    department_id = session.get('department_id')
+    
+    data = request.json
+    year = data.get('year')
+    section = data.get('section', '').strip().upper()
+    
+    if not year or not section:
+        return jsonify({'success': False, 'error': 'Year and section required'})
+    
+    existing = ClassSection.query.filter_by(
+        department_id=department_id, 
+        year=year, 
+        section=section
+    ).first()
+    
+    if existing:
+        return jsonify({'success': False, 'error': f'Section {section} already exists for {year}'})
+    
+    new_section = ClassSection(year=year, section=section, department_id=department_id)
+    db.session.add(new_section)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': f'Section {section} added for {year}'})
+
+@app.route('/delete_section', methods=['POST'])
+def delete_section():
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    
+    data = request.json
+    section_id = data.get('section_id')
+    
+    section = ClassSection.query.get(section_id)
+    if not section:
+        return jsonify({'success': False, 'error': 'Section not found'})
+    
+    students_count = Student.query.filter_by(
+        department_id=section.department_id,
+        year=section.year, 
+        section=section.section
+    ).count()
+    
+    if students_count > 0:
+        return jsonify({'success': False, 'error': f'Cannot delete! {students_count} students are in this section. Move them first.'})
+    
+    db.session.delete(section)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': f'Section {section.section} deleted for {section.year}'})
+
+@app.route('/add_student', methods=['POST'])
+def add_student():
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return redirect(url_for('index'))
+    
+    department_id = session.get('department_id')
+    
+    name = request.form.get('name', '').strip()
+    reg_no = request.form.get('register_number', '').strip()
+    year = request.form.get('year', '')
+    section = request.form.get('section', '')
+    batch = request.form.get('batch', '').strip()
+    
+    if not name or not reg_no or not year or not section or not batch:
+        session['upload_message'] = 'All fields are required!'
+        return redirect(url_for('admin_dashboard'))
+    
+    existing = Student.query.filter_by(register_number=reg_no).first()
+    if existing:
+        session['upload_message'] = f'Student {reg_no} already exists!'
+        return redirect(url_for('admin_dashboard'))
+    
+    try:
+        student = Student(
+            name=name,
+            register_number=reg_no,
+            year=year,
+            section=section,
+            batch=batch,
+            department_id=department_id
+        )
+        db.session.add(student)
+        db.session.commit()
+        session['upload_message'] = f'✅ Student {name} added successfully!'
+    except Exception as e:
+        db.session.rollback()
+        session['upload_message'] = f'❌ Error: {str(e)}'
+    
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/upload_students', methods=['POST'])
+def upload_students():
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return redirect(url_for('index'))
+    
+    department_id = session.get('department_id')
+    
+    if 'file' not in request.files:
+        session['upload_message'] = 'No file selected'
+        return redirect(url_for('admin_dashboard'))
+    
+    file = request.files['file']
+    year = request.form['year']
+    section = request.form['section']
+    
+    if file.filename == '':
+        session['upload_message'] = 'No file selected'
+        return redirect(url_for('admin_dashboard'))
+    
+    if file and allowed_file(file.filename):
+        try:
+            if file.filename.endswith('.csv'):
+                df = pd.read_csv(file)
+            else:
+                df = pd.read_excel(file)
+            
+            if 'name' not in df.columns or 'register_number' not in df.columns:
+                session['upload_message'] = 'File must have columns: name, register_number'
+                return redirect(url_for('admin_dashboard'))
+            
+            existing_students = Student.query.filter_by(
+                department_id=department_id,
+                year=year, 
+                section=section
+            ).all()
+            existing_reg_numbers = [s.register_number for s in existing_students]
+            
+            added_count = 0
+            skipped_count = 0
+            
+            for _, row in df.iterrows():
+                name = str(row['name']).strip()
+                reg_no = str(row['register_number']).strip()
+                batch = row['batch'] if 'batch' in df.columns else f"{year[:2]}22-{int(year[:2])+3}25"
+                
+                if reg_no not in existing_reg_numbers and name:
+                    student = Student(
+                        name=name,
+                        register_number=reg_no,
+                        year=year,
+                        section=section,
+                        batch=str(batch),
+                        department_id=department_id
+                    )
+                    db.session.add(student)
+                    added_count += 1
+                else:
+                    skipped_count += 1
+            
+            db.session.commit()
+            session['upload_message'] = f'✅ Added {added_count} students. Skipped {skipped_count} duplicates.'
+            
+        except Exception as e:
+            session['upload_message'] = f'❌ Error: {str(e)}'
+    
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/delete_student/<int:student_id>')
+def delete_student(student_id):
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return redirect(url_for('index'))
+    
+    student = Student.query.get_or_404(student_id)
+    year = student.year
+    section = student.section
+    
+    Attendance.query.filter_by(student_id=student_id).delete()
+    Extracurricular.query.filter_by(student_id=student_id).delete()
+    db.session.delete(student)
+    db.session.commit()
+    
+    return redirect(url_for('view_class', year=year, section=section))
+
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('index'))
 
-# ==================== DELETE GLOBAL STAFF ====================
-
-@app.route('/delete_global_staff/<int:staff_id>')
-def delete_global_staff(staff_id):
-    staff = Staff.query.get_or_404(staff_id)
-    
-    if staff.is_department_admin:
-        return render_template('add_new_staff.html', 
-                             error=f'Cannot delete department admin!', 
-                             all_staff=Staff.query.filter_by(is_department_admin=False).all())
-    
-    # Delete staff from all department assignments first
-    StaffDepartment.query.filter_by(staff_id=staff_id).delete()
-    
-    db.session.delete(staff)
-    db.session.commit()
-    
-    all_staff = Staff.query.filter_by(is_department_admin=False).all()
-    return render_template('add_new_staff.html', 
-                         success=f'Staff {staff.name} deleted successfully!',
-                         all_staff=all_staff)
-
-# ==================== DELETE DEPARTMENT ====================
-
-@app.route('/delete_department/<int:dept_id>')
-def delete_department(dept_id):
-    department = Department.query.get_or_404(dept_id)
-    
-    # Check if there are students in this department
-    students_count = Student.query.filter_by(department_id=dept_id).count()
-    if students_count > 0:
-        all_departments = Department.query.all()
-        dept_admins = {}
-        for dept in all_departments:
-            admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
-            dept_admins[dept.id] = admin
-        
-        return render_template('add_new_department.html', 
-                             error=f'Cannot delete! {students_count} students are in this department. Delete or move them first.',
-                             all_departments=all_departments,
-                             dept_admins=dept_admins)
-    
-    # Delete department admin first
-    admin = Staff.query.filter_by(admin_department_id=dept_id, is_department_admin=True).first()
-    if admin:
-        db.session.delete(admin)
-    
-    # Delete all sections for this department
-    ClassSection.query.filter_by(department_id=dept_id).delete()
-    
-    # Delete all activity types for this department
-    ActivityType.query.filter_by(department_id=dept_id).delete()
-    
-    # Delete staff assignments for this department
-    StaffDepartment.query.filter_by(department_id=dept_id).delete()
-    
-    # Delete the department
-    db.session.delete(department)
-    db.session.commit()
-    
-    all_departments = Department.query.all()
-    dept_admins = {}
-    for dept in all_departments:
-        admin = Staff.query.filter_by(admin_department_id=dept.id, is_department_admin=True).first()
-        dept_admins[dept.id] = admin
-    
-    return render_template('add_new_department.html', 
-                         success=f'Department {department.name} deleted successfully!',
-                         all_departments=all_departments,
-                         dept_admins=dept_admins)
-
-@app.route('/change_staff_password', methods=['POST'])
-def change_staff_password():
-    data = request.json
-    entity_type = data.get('type')
-    entity_id = data.get('id')
-    new_password = data.get('new_password')
-    
-    if not new_password or len(new_password) < 6:
-        return jsonify({'success': False, 'error': 'Password must be at least 6 characters'})
-    
-    try:
-        if entity_type == 'staff':
-            staff = Staff.query.get(entity_id)
-            if not staff:
-                return jsonify({'success': False, 'error': 'Staff not found'})
-            staff.set_password(new_password)
-            
-        elif entity_type == 'admin':
-            admin = Staff.query.get(entity_id)
-            if not admin:
-                return jsonify({'success': False, 'error': 'Admin not found'})
-            admin.set_password(new_password)
-        else:
-            return jsonify({'success': False, 'error': 'Invalid entity type'})
-        
-        db.session.commit()
-        return jsonify({'success': True, 'message': 'Password changed successfully'})
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({'success': False, 'error': str(e)})
-
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Head Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            max-width: 700px;
+            margin: 0 auto;
+            padding: 30px;
+            position: relative;
+        }
+
+        /* Small Change Password Button - Top Right */
+        .change-password-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.7em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .change-password-btn:hover {
+            background: #c82333;
+            transform: scale(1.05);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .header h1 {
+            color: #1e3c72;
+            font-size: 1.5em;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-size: 0.85em;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        /* Compact Menu Cards */
+        .menu-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .menu-card {
+            flex: 1;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            padding: 15px;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .menu-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .menu-title {
+            font-size: 1em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .menu-desc {
+            color: #666;
+            font-size: 0.7em;
+            margin-bottom: 10px;
+        }
+
+        .menu-btn {
+            background: #17a2b8;
+            color: white;
+            padding: 6px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .menu-btn:hover {
+            background: #138496;
+            transform: translateY(-2px);
+        }
+
+        .menu-btn-warning {
+            background: #fd7e14;
+        }
+
+        .menu-btn-warning:hover {
+            background: #e67e22;
+        }
+
+        /* Department Section */
+        .department-section {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .department-section h3 {
+            color: #333;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .department-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+
+        .department-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .department-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .department-name {
+            font-weight: bold;
+            font-size: 1em;
+        }
+
+        .department-code {
+            font-size: 0.7em;
+            opacity: 0.8;
+            margin-top: 3px;
+        }
+
+        .no-departments {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            width: 380px;
+            max-width: 90%;
+        }
+
+        .modal-content h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .modal-buttons .save {
+            background: #28a745;
+            color: white;
+        }
+
+        .modal-buttons .cancel {
+            background: #6c757d;
+            color: white;
+        }
+
+        .alert {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 0.8em;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+            .menu-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .department-grid {
+                grid-template-columns: 1fr;
+            }
+            .change-password-btn {
+                position: static;
+                margin-bottom: 15px;
+                width: 100%;
+            }
+            .header {
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Small Change Password Button - Top Right -->
+        <button class="change-password-btn" onclick="showChangePasswordModal()">🔐 Change Password</button>
+
+        <div class="header">
+            <h1>👨‍💼 Head Dashboard</h1>
+            <a href="{{ url_for('index') }}" class="btn-secondary">Back to Login</a>
+        </div>
+
+        {% if success %}
+        <div class="alert alert-success">
+            {{ success }}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="alert alert-error">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <!-- Compact Menu Cards -->
+        <div class="menu-row">
+            <div class="menu-card">
+                <div class="menu-title">➕ Add Department</div>
+                <div class="menu-desc">Create new department with admin</div>
+                <a href="{{ url_for('add_new_department_page') }}" class="menu-btn menu-btn-warning">Add Department</a>
+            </div>
+            <div class="menu-card">
+                <div class="menu-title">👤 Add Staff</div>
+                <div class="menu-desc">Add staff with global access</div>
+                <a href="{{ url_for('add_new_staff_page') }}" class="menu-btn menu-btn-warning">Add Staff</a>
+            </div>
+        </div>
+
+        <!-- Department Section -->
+        <div class="department-section">
+            <h3>📋 Select Department to Manage</h3>
+            <div class="department-grid" id="departmentGrid">
+                {% if departments %}
+                    {% for dept in departments %}
+                    <div class="department-card" onclick="openDepartmentDashboard('{{ dept.id }}')">
+                        <div class="department-name">{{ dept.name }}</div>
+                        <div class="department-code">{{ dept.code }}</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-departments">
+                        No departments found. Click "Add Department" to create one.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="passwordModal" class="modal">
+        <div class="modal-content">
+            <h3>Change Admin Password</h3>
+            <input type="password" id="currentPassword" placeholder="Current Admin Password">
+            <input type="password" id="newPassword" placeholder="New Password (min 6 characters)">
+            <input type="password" id="confirmPassword" placeholder="Confirm New Password">
+            <div class="modal-buttons">
+                <button class="save" onclick="changeAdminPassword()">Save</button>
+                <button class="cancel" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showChangePasswordModal() {
+            document.getElementById('currentPassword').value = '';
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('passwordModal').style.display = 'block';
+        }
+
+        function closeModal() {
+            document.getElementById('passwordModal').style.display = 'none';
+        }
+
+        function changeAdminPassword() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!currentPassword) {
+                alert('Please enter current password');
+                return;
+            }
+
+            if (!newPassword) {
+                alert('Please enter a new password');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                alert('New passwords do not match!');
+                return;
+            }
+
+            if (newPassword.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+
+            fetch('/change_head_password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Admin password changed successfully! New password: ' + newPassword);
+                    closeModal();
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to change password. Please try again.');
+            });
+        }
+
+        function openDepartmentDashboard(departmentId) {
+            // Clear any existing session data for clean access
+            // Use window.location.href to navigate to admin dashboard with department ID
+            window.location.href = "/admin_dashboard?dept_id=" + departmentId;
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('passwordModal');
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    </script>
+</body>
+</html>

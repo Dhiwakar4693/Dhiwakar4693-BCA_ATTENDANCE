@@ -13,16 +13,16 @@
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
 
         .container {
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            max-width: 1000px;
+            border-radius: 30px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+            max-width: 800px;
             margin: 0 auto;
             padding: 30px;
         }
@@ -34,6 +34,26 @@
             margin-bottom: 25px;
             padding-bottom: 15px;
             border-bottom: 2px solid #f0f0f0;
+        }
+
+        .header h1 {
+            color: #1e3c72;
+            font-size: 1.5em;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-size: 0.85em;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
         }
 
         .form-group {
@@ -70,48 +90,48 @@
             width: 100%;
         }
 
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-        }
-
         .btn-primary:hover {
             background: #218838;
             transform: translateY(-2px);
         }
 
-        .btn-warning {
-            background: #ffc107;
-            color: #333;
-            padding: 4px 10px;
-            font-size: 0.75em;
-            border-radius: 4px;
-            text-decoration: none;
-            display: inline-block;
-            margin-right: 5px;
-            border: none;
-            cursor: pointer;
+        .btn-add-subject {
+            background: #17a2b8;
+            color: white;
+            padding: 8px 15px;
+            margin-top: 10px;
         }
 
-        .btn-warning:hover {
-            background: #e0a800;
+        .btn-add-subject:hover {
+            background: #138496;
         }
 
-        .btn-danger {
+        .btn-remove-subject {
             background: #dc3545;
             color: white;
+            border: none;
             padding: 4px 10px;
-            font-size: 0.75em;
-            border-radius: 4px;
-            text-decoration: none;
-            display: inline-block;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.7em;
         }
 
-        .btn-danger:hover {
-            background: #c82333;
+        .subjects-list {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 10px;
+            min-height: 60px;
+        }
+
+        .subject-tag {
+            display: inline-block;
+            background: #17a2b8;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            margin: 5px;
+            font-size: 0.85em;
         }
 
         .info-note {
@@ -130,7 +150,6 @@
             border-radius: 8px;
             margin-bottom: 20px;
             text-align: center;
-            font-size: 0.85em;
         }
 
         .success-message {
@@ -140,7 +159,15 @@
             border-radius: 8px;
             margin-bottom: 20px;
             text-align: center;
-            font-size: 0.85em;
+        }
+
+        .subject-input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .subject-input-group input {
+            flex: 1;
         }
 
         .staff-list {
@@ -187,10 +214,50 @@
             font-size: 0.7em;
         }
 
+        .subject-badge {
+            display: inline-block;
+            background: #ffc107;
+            color: #333;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            margin: 2px;
+        }
+
         .action-buttons {
             display: flex;
             gap: 5px;
             flex-wrap: wrap;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+            padding: 4px 10px;
+            font-size: 0.75em;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            padding: 4px 10px;
+            font-size: 0.75em;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
         }
 
         /* Modal Styles */
@@ -201,8 +268,9 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.6);
             z-index: 1000;
+            backdrop-filter: blur(5px);
         }
 
         .modal-content {
@@ -212,19 +280,20 @@
             transform: translate(-50%, -50%);
             background: white;
             padding: 25px;
-            border-radius: 10px;
-            width: 400px;
+            border-radius: 20px;
+            width: 380px;
             max-width: 90%;
         }
 
         .modal-content h3 {
             margin-bottom: 15px;
+            color: #333;
         }
 
         .modal-content input {
             width: 100%;
             padding: 10px;
-            margin: 10px 0;
+            margin: 8px 0;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
         }
@@ -239,8 +308,9 @@
             flex: 1;
             padding: 10px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
+            font-weight: 600;
         }
 
         .modal-buttons .save {
@@ -257,12 +327,17 @@
             .container {
                 padding: 20px;
             }
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            .subject-input-group {
+                flex-direction: column;
+            }
             .staff-table th, .staff-table td {
                 padding: 6px;
                 font-size: 0.75em;
-            }
-            .action-buttons {
-                flex-direction: column;
             }
         }
     </style>
@@ -270,47 +345,58 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Add New Staff</h1>
-            <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Login</a>
+            <h1>👤 Add New Staff</h1>
+            <a href="{{ url_for('head_dashboard') }}" class="btn-secondary">Back to Head Dashboard</a>
         </div>
 
         {% if error %}
-        <div class="error-message">
-            {{ error }}
-        </div>
+        <div class="error-message">{{ error }}</div>
         {% endif %}
 
         {% if success %}
-        <div class="success-message">
-            {{ success }}
-        </div>
+        <div class="success-message">{{ success }}</div>
         {% endif %}
 
-        <form method="POST" action="{{ url_for('add_global_staff') }}">
+        <form method="POST" action="{{ url_for('add_global_staff') }}" id="staffForm">
             <div class="form-group">
                 <label>Staff Name *</label>
-                <input type="text" name="staff_name" required>
+                <input type="text" name="staff_name" placeholder="e.g., John Doe" required>
             </div>
             <div class="form-group">
                 <label>Password *</label>
-                <input type="password" name="staff_password" required>
+                <input type="password" name="staff_password" placeholder="Min 6 characters" required>
             </div>
+            
+            <!-- Subjects Section -->
             <div class="form-group">
-                <label>Subject *</label>
-                <input type="text" name="staff_subject" placeholder="e.g., Python, Mathematics" required>
+                <label>Subjects (Can teach multiple subjects) *</label>
+                <div class="subject-input-group">
+                    <input type="text" id="subjectInput" placeholder="e.g., Python, Java, C++">
+                    <button type="button" class="btn-add-subject" onclick="addSubject()">+ Add Subject</button>
+                </div>
+                <div id="subjectsList" class="subjects-list">
+                    <small style="color: #666;">Added subjects will appear here</small>
+                </div>
+                <input type="hidden" name="subjects" id="subjectsHidden" required>
             </div>
+            
             <button type="submit" class="btn btn-primary">Add Staff</button>
         </form>
 
+        <div class="info-note">
+            <strong>💡 Note:</strong> Staff can teach multiple subjects. Add all subjects they are qualified to teach. Staff will have access to ALL departments.
+        </div>
+
+        <!-- Staff List Section -->
         <div class="staff-list">
-            <h3>Existing Staff List</h3>
+            <h3>📋 Existing Staff List</h3>
             {% if all_staff %}
             <table class="staff-table">
                 <thead>
                     <tr>
                         <th>Staff Name</th>
-                        <th>Subject</th>
-                        <th>Password Status</th>
+                        <th>Subjects</th>
+                        <th>Status</th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -318,16 +404,21 @@
                     {% for staff_member in all_staff %}
                     <tr id="staff-row-{{ staff_member.id }}">
                         <td>{{ staff_member.name }}</div>
-                        <td>{{ staff_member.subject }}</div>
                         <td>
-                            <span class="password-status">✓ Password Set</span>
-                            <span style="font-size: 0.65em; color: #666; display: block;">(Secured)</span>
+                            {% set subjects = staff_member.get_subjects_list() %}
+                            {% for sub in subjects %}
+                            <span class="subject-badge">{{ sub }}</span>
+                            {% endfor %}
+                            {% if not subjects %}
+                            <span style="color: #999;">No subjects</span>
+                            {% endif %}
                         </div>
+                        <td><span class="password-status">✓ Password Set</span></div>
                         <td>
                             <div class="action-buttons">
                                 <button class="btn-warning" onclick="showChangePasswordModal('staff', '{{ staff_member.id }}', '{{ staff_member.name }}')">Change Password</button>
                                 <a href="{{ url_for('delete_global_staff', staff_id=staff_member.id) }}" 
-                                   class="btn btn-danger" 
+                                   class="btn-danger" 
                                    onclick="return confirm('Delete staff {{ staff_member.name }}? This will remove their access to all departments.')">
                                     Delete
                                 </a>
@@ -338,12 +429,8 @@
                 </tbody>
             </table>
             {% else %}
-            <p style="text-align: center; color: #999; padding: 20px;">No staff added yet.</p>
+            <p style="text-align: center; color: #999; padding: 20px;">No staff added yet. Add your first staff member above.</p>
             {% endif %}
-        </div>
-
-        <div class="info-note">
-            <strong>Note:</strong> Staff will have access to ALL departments and all classes. Passwords are securely encrypted.
         </div>
     </div>
 
@@ -351,11 +438,11 @@
     <div id="passwordModal" class="modal">
         <div class="modal-content">
             <h3>Change Password</h3>
+            <p id="modalEntityName" style="margin-bottom: 15px; color: #666;"></p>
+            <input type="password" id="newPassword" placeholder="New Password (min 6 characters)">
+            <input type="password" id="confirmPassword" placeholder="Confirm New Password">
             <input type="hidden" id="entityType">
             <input type="hidden" id="entityId">
-            <p id="entityName" style="margin-bottom: 10px;"></p>
-            <input type="password" id="newPassword" placeholder="Enter new password" autocomplete="off">
-            <input type="password" id="confirmPassword" placeholder="Confirm new password">
             <div class="modal-buttons">
                 <button class="save" onclick="changePassword()">Save</button>
                 <button class="cancel" onclick="closeModal()">Cancel</button>
@@ -364,10 +451,70 @@
     </div>
 
     <script>
+        let subjects = [];
+
+        function addSubject() {
+            const subjectInput = document.getElementById('subjectInput');
+            const subject = subjectInput.value.trim();
+            
+            if (!subject) {
+                alert('Please enter a subject');
+                return;
+            }
+            
+            if (subjects.includes(subject)) {
+                alert('Subject already added!');
+                return;
+            }
+            
+            subjects.push(subject);
+            updateSubjectsDisplay();
+            subjectInput.value = '';
+            subjectInput.focus();
+        }
+
+        function removeSubject(index) {
+            subjects.splice(index, 1);
+            updateSubjectsDisplay();
+        }
+
+        function updateSubjectsDisplay() {
+            const container = document.getElementById('subjectsList');
+            const hiddenInput = document.getElementById('subjectsHidden');
+            
+            if (subjects.length === 0) {
+                container.innerHTML = '<small style="color: #666;">Added subjects will appear here</small>';
+                hiddenInput.value = '';
+                return;
+            }
+            
+            let html = '';
+            subjects.forEach((subject, index) => {
+                html += `<span class="subject-tag">
+                            ${subject} 
+                            <button type="button" class="btn-remove-subject" onclick="removeSubject(${index})" style="margin-left: 8px;">✗</button>
+                         </span>`;
+            });
+            container.innerHTML = html;
+            hiddenInput.value = subjects.join(',');
+        }
+
+        // Form validation before submit
+        document.getElementById('staffForm').addEventListener('submit', function(e) {
+            if (subjects.length === 0) {
+                e.preventDefault();
+                alert('Please add at least one subject for the staff member');
+            }
+        });
+
+        // Password change functions
+        let currentEntityType = null;
+        let currentEntityId = null;
+
         function showChangePasswordModal(type, id, name) {
-            document.getElementById('entityType').value = type;
-            document.getElementById('entityId').value = id;
-            document.getElementById('entityName').innerHTML = '<strong>' + name + '</strong>';
+            currentEntityType = type;
+            currentEntityId = id;
+            document.getElementById('modalEntityName').innerHTML = '<strong>' + name + '</strong>';
             document.getElementById('newPassword').value = '';
             document.getElementById('confirmPassword').value = '';
             document.getElementById('passwordModal').style.display = 'block';
@@ -375,13 +522,13 @@
 
         function closeModal() {
             document.getElementById('passwordModal').style.display = 'none';
+            currentEntityType = null;
+            currentEntityId = null;
         }
 
         function changePassword() {
-            var type = document.getElementById('entityType').value;
-            var id = document.getElementById('entityId').value;
-            var newPassword = document.getElementById('newPassword').value;
-            var confirmPassword = document.getElementById('confirmPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
 
             if (!newPassword) {
                 alert('Please enter a new password');
@@ -404,8 +551,8 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    type: type,
-                    id: id,
+                    type: 'staff',
+                    id: currentEntityId,
                     new_password: newPassword
                 })
             })
@@ -424,9 +571,8 @@
             });
         }
 
-        // Close modal when clicking outside
         window.onclick = function(event) {
-            var modal = document.getElementById('passwordModal');
+            const modal = document.getElementById('passwordModal');
             if (event.target == modal) {
                 closeModal();
             }
