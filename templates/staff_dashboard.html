@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>Staff Dashboard - {{ department.name }}</title>
     <style>
         * {
@@ -15,46 +15,36 @@
         body {
             background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #764ba2 100%);
             min-height: 100vh;
-            padding: 20px;
+            padding: 16px;
         }
 
         .container {
             background: white;
-            border-radius: 30px;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
-            max-width: 1300px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 30px;
+            overflow: hidden;
         }
 
+        /* Header */
         .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #f0f0f0;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 10px;
         }
 
         .header h2 {
-            color: #1e3c72;
-            font-size: 1.8em;
-        }
-
-        .department-badge {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8em;
-            margin-left: 10px;
+            font-size: 1.3em;
         }
 
         .subjects-badge {
-            background: #17a2b8;
-            color: white;
+            background: rgba(255,255,255,0.2);
             padding: 5px 12px;
             border-radius: 20px;
             font-size: 0.7em;
@@ -62,112 +52,113 @@
             margin-top: 5px;
         }
 
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.9em;
+            display: inline-block;
+        }
+
+        /* Info Cards */
         .class-info {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
+            padding: 16px 20px;
+            margin: 20px;
+            border-radius: 12px;
         }
 
         .class-info h3 {
-            margin-bottom: 10px;
-            font-size: 1.5em;
+            font-size: 1.2em;
+            margin-bottom: 5px;
         }
 
         .class-info p {
-            font-size: 1.1em;
+            font-size: 0.85em;
             opacity: 0.9;
         }
 
-        .period-info {
+        .period-info, .date-info {
             background: #e8f4f8;
-            color: #0066cc;
-            padding: 15px;
+            padding: 12px 20px;
+            margin: 0 20px 15px 20px;
             border-radius: 10px;
-            margin-bottom: 20px;
             text-align: center;
             font-weight: bold;
-            font-size: 1.2em;
-            border-left: 4px solid #0066cc;
         }
 
         .date-info {
             background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 1.2em;
+            color: #333;
         }
 
+        /* Unsaved Indicator */
         .unsaved-indicator {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 10px;
+            right: 10px;
             background: #ffc107;
             color: #856404;
-            padding: 10px 20px;
+            padding: 8px 16px;
             border-radius: 50px;
             font-weight: 600;
-            box-shadow: 0 5px 15px rgba(255,193,7,0.3);
+            font-size: 0.8em;
             display: none;
             z-index: 1000;
-            animation: pulse 1s infinite;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
         }
 
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
+        /* Stats */
         .stats-summary {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            display: flex;
             gap: 15px;
-            margin-bottom: 20px;
+            justify-content: center;
+            margin: 0 20px 20px 20px;
+            flex-wrap: wrap;
         }
 
         .stat-box {
             background: #f8f9fa;
-            padding: 15px;
+            padding: 12px 20px;
             border-radius: 10px;
             text-align: center;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            flex: 1;
+            min-width: 100px;
         }
 
         .stat-box .number {
-            font-size: 2em;
+            font-size: 1.5em;
             font-weight: bold;
             color: #667eea;
         }
 
         .stat-box .label {
+            font-size: 0.7em;
             color: #666;
-            margin-top: 5px;
         }
 
+        /* Bulk Actions */
         .bulk-actions {
             display: flex;
-            gap: 15px;
+            gap: 10px;
             justify-content: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 10px;
+            margin: 0 20px 20px 20px;
             flex-wrap: wrap;
         }
 
         .bulk-btn {
-            padding: 10px 25px;
+            padding: 8px 20px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 1em;
-            transition: all 0.3s;
+            flex: 1;
+            min-width: 120px;
         }
 
         .bulk-present {
@@ -175,59 +166,61 @@
             color: white;
         }
 
-        .bulk-present:hover {
-            background: #218838;
-            transform: translateY(-2px);
-        }
-
         .bulk-absent {
             background: #dc3545;
             color: white;
         }
 
-        .bulk-absent:hover {
-            background: #c82333;
-            transform: translateY(-2px);
-        }
-
+        /* Table - Compact Layout */
         .table-wrapper {
             overflow-x: auto;
-            margin-top: 20px;
-            position: relative;
+            margin: 0 20px 20px 20px;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            min-width: 800px;
+            min-width: 500px;
         }
 
         th {
             background: #667eea;
             color: white;
-            padding: 12px;
+            padding: 12px 8px;
             text-align: center;
             font-weight: 600;
+            font-size: 0.8em;
         }
 
         td {
-            padding: 10px;
-            text-align: center;
-            border-bottom: 1px solid #ddd;
+            padding: 10px 8px;
+            border-bottom: 1px solid #f0f0f0;
+            vertical-align: middle;
         }
 
-        .student-name {
-            text-align: left;
+        .reg-cell {
+            white-space: nowrap;
             font-weight: 500;
+            font-size: 0.85em;
         }
 
+        .name-cell {
+            font-weight: 500;
+            font-size: 0.85em;
+        }
+
+        .attendance-cell {
+            text-align: center;
+            min-width: 200px;
+        }
+
+        /* Attendance Buttons */
         .attendance-options {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             justify-content: center;
             flex-wrap: wrap;
         }
@@ -235,12 +228,12 @@
         .attendance-btn {
             padding: 6px 12px;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            transition: all 0.3s;
-            min-width: 80px;
-            font-size: 0.85em;
+            font-size: 0.75em;
+            min-width: 65px;
+            transition: all 0.2s;
         }
 
         .present-active {
@@ -263,7 +256,7 @@
             color: #666;
         }
 
-        /* IMPROVED OD DROPDOWN - Fixed positioning */
+        /* OD Dropdown */
         .od-dropdown {
             position: relative;
             display: inline-block;
@@ -274,37 +267,32 @@
             color: white;
             padding: 6px 12px;
             border: none;
-            border-radius: 5px;
+            border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 0.85em;
-            min-width: 70px;
-            transition: all 0.2s;
-        }
-
-        .od-dropbtn:hover {
-            background: #138496;
+            font-size: 0.75em;
+            min-width: 55px;
         }
 
         .od-dropdown-content {
             display: none;
             position: fixed;
             background-color: white;
-            min-width: 200px;
+            min-width: 180px;
             box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
             z-index: 1000;
             border-radius: 8px;
             padding: 5px 0;
-            max-height: 300px;
+            max-height: 250px;
             overflow-y: auto;
         }
 
         .od-dropdown-content a {
             display: block;
-            padding: 10px 15px;
+            padding: 8px 15px;
             text-decoration: none;
             color: #333;
-            font-size: 0.8em;
+            font-size: 0.75em;
             transition: background 0.2s;
         }
 
@@ -312,25 +300,23 @@
             background-color: #e8f4f8;
         }
 
+        /* Action Buttons */
         .button-group {
             display: flex;
             gap: 15px;
-            margin-top: 30px;
+            margin: 20px;
             flex-wrap: wrap;
         }
 
         .btn {
-            padding: 12px 25px;
+            padding: 12px 20px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 0.9em;
             font-weight: 600;
-            text-decoration: none;
-            display: inline-block;
-            transition: all 0.3s;
-            text-align: center;
             flex: 1;
+            text-align: center;
         }
 
         .btn-save {
@@ -343,35 +329,26 @@
             color: white;
         }
 
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-            padding: 10px 20px;
-            text-decoration: none;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
+        /* Alerts */
         .alert {
-            padding: 12px;
+            padding: 10px 15px;
+            margin: 0 20px 15px 20px;
             border-radius: 8px;
-            margin-bottom: 20px;
             text-align: center;
+            font-size: 0.8em;
         }
 
         .alert-success {
             background: #d4edda;
             color: #155724;
-            border: 1px solid #c3e6cb;
         }
 
         .alert-error {
             background: #f8d7da;
             color: #721c24;
-            border: 1px solid #f5c6cb;
         }
 
-        /* Loading overlay */
+        /* Loading */
         .loading-overlay {
             display: none;
             position: fixed;
@@ -390,10 +367,10 @@
         }
 
         .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #3498db;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
@@ -403,35 +380,71 @@
             100% { transform: rotate(360deg); }
         }
 
+        /* Mobile Optimizations */
         @media (max-width: 768px) {
-            .container {
-                padding: 15px;
+            body {
+                padding: 10px;
             }
-            th, td {
-                padding: 6px;
-                font-size: 11px;
-            }
-            .attendance-btn, .od-dropbtn {
-                padding: 4px 8px;
-                min-width: 55px;
-                font-size: 0.7em;
-            }
-            .button-group {
-                flex-direction: column;
-            }
-            .stats-summary {
-                grid-template-columns: 1fr;
-            }
+
             .header {
                 flex-direction: column;
-                gap: 15px;
                 text-align: center;
             }
-            .bulk-actions {
+
+            .class-info, .period-info, .date-info {
+                margin: 10px;
+            }
+
+            .table-wrapper {
+                margin: 0 10px 15px 10px;
+            }
+
+            th {
+                padding: 8px 4px;
+                font-size: 0.7em;
+            }
+
+            td {
+                padding: 8px 4px;
+            }
+
+            .reg-cell, .name-cell {
+                font-size: 0.75em;
+            }
+
+            .attendance-btn, .od-dropbtn {
+                padding: 4px 8px;
+                font-size: 0.65em;
+                min-width: 50px;
+            }
+
+            .attendance-options {
+                gap: 4px;
+            }
+
+            .stats-summary, .bulk-actions {
+                margin: 0 10px 15px 10px;
+            }
+
+            .button-group {
+                margin: 15px;
                 flex-direction: column;
             }
-            .bulk-btn {
-                width: 100%;
+
+            .btn {
+                padding: 10px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .reg-cell, .name-cell {
+                font-size: 0.7em;
+            }
+
+            .attendance-btn, .od-dropbtn {
+                padding: 3px 6px;
+                font-size: 0.6em;
+                min-width: 45px;
             }
         }
     </style>
@@ -447,17 +460,19 @@
     </div>
 
     <div class="container">
+        <!-- Header -->
         <div class="header">
             <div>
-                <h2>👨‍🏫 Staff - {{ staff_name }}</h2>
-                <div class="subjects-badge">📚 Subjects: {{ staff_subjects|join(', ') }}</div>
+                <h2>👨‍🏫 {{ staff_name }}</h2>
+                <div class="subjects-badge">📚 {{ staff_subjects|join(', ') }}</div>
             </div>
-            <a href="#" class="btn btn-secondary" id="logoutBtn">Logout</a>
+            <a href="#" class="logout-btn" id="logoutBtn">🚪 Logout</a>
         </div>
 
+        <!-- Class Info -->
         <div class="class-info">
             <h3>{{ year }} - Section {{ section }}</h3>
-            <p>Department: <strong>{{ department.name }} ({{ department.code }})</strong> | Total Students: <strong>{{ students|length }}</strong></p>
+            <p>{{ department.name }} ({{ department.code }}) | Total: {{ students|length }} Students</p>
         </div>
 
         <div class="period-info">
@@ -465,9 +480,10 @@
         </div>
 
         <div class="date-info">
-            📅 Date: {{ today }}
+            📅 {{ today }}
         </div>
 
+        <!-- Messages -->
         {% if session.od_success %}
         <div class="alert alert-success">
             ✅ {{ session.od_success }}
@@ -482,10 +498,11 @@
         </div>
         {% endif %}
 
+        <!-- Stats -->
         <div class="stats-summary">
             <div class="stat-box">
                 <div class="number">{{ students|length }}</div>
-                <div class="label">Total Students</div>
+                <div class="label">Total</div>
             </div>
             <div class="stat-box">
                 <div class="number" id="presentCount">0</div>
@@ -497,16 +514,17 @@
             </div>
         </div>
 
+        <!-- Bulk Actions -->
         <div class="bulk-actions">
-            <button class="bulk-btn bulk-present" id="bulkPresentBtn">✅ Mark All Present</button>
-            <button class="bulk-btn bulk-absent" id="bulkAbsentBtn">❌ Mark All Absent</button>
+            <button class="bulk-btn bulk-present" id="bulkPresentBtn">✅ All Present</button>
+            <button class="bulk-btn bulk-absent" id="bulkAbsentBtn">❌ All Absent</button>
         </div>
 
+        <!-- Student Table - Compact Layout -->
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
-                        <th>#</th>
                         <th>Reg No</th>
                         <th>Student Name</th>
                         <th>Attendance</th>
@@ -514,17 +532,15 @@
                 </thead>
                 <tbody>
                     {% for student in students %}
-                    <tr id="row-{{ student.id }}">
-                        <td>{{ loop.index }}</div>
-                        <td id="reg-{{ student.id }}">{{ student.register_number }}</div>
-                        <td class="student-name">{{ student.name }}</div>
+                    <tr class="student-row" id="row-{{ student.id }}">
+                        <td class="reg-cell">{{ student.register_number }}</td>
+                        <td class="name-cell">{{ student.name }}</td>
                         <td class="attendance-cell">
                             {% set status = attendance_dict.get(student.id, {}).get(period) %}
                             <div class="attendance-options">
                                 <button class="attendance-btn present-btn {% if status == 'present' %}present-active{% else %}present-inactive{% endif %}" 
                                         data-student-id="{{ student.id }}"
                                         data-regno="{{ student.register_number }}"
-                                        data-status="present"
                                         onclick="markAttendance(this, '{{ student.register_number }}', 'present')">
                                     ✅ Present
                                 </button>
@@ -543,18 +559,18 @@
                                 <button class="attendance-btn absent-btn {% if status == 'absent' %}absent-active{% else %}absent-inactive{% endif %}" 
                                         data-student-id="{{ student.id }}"
                                         data-regno="{{ student.register_number }}"
-                                        data-status="absent"
                                         onclick="markAttendance(this, '{{ student.register_number }}', 'absent')">
                                     ❌ Absent
                                 </button>
                             </div>
-                        </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
 
+        <!-- Action Buttons -->
         <div class="button-group">
             <button onclick="saveAttendance()" class="btn btn-save">💾 Save & Exit</button>
             <button onclick="discardAttendance()" class="btn btn-exit">🗑️ Discard & Exit</button>
@@ -567,81 +583,30 @@
         let currentDate = document.getElementById('todayDate').value;
         const unsavedIndicator = document.getElementById('unsavedIndicator');
         let markedStudents = new Set();
-        let activeODMenu = null;
+        
+        // Get total students count from the table
+        const totalStudents = document.querySelectorAll('tbody tr').length;
         
         function updateUnsavedIndicator() {
-            if (hasUnsavedChanges) {
-                unsavedIndicator.style.display = 'block';
-            } else {
-                unsavedIndicator.style.display = 'none';
-            }
+            unsavedIndicator.style.display = hasUnsavedChanges ? 'block' : 'none';
         }
         
         function updateStatistics() {
             const rows = document.querySelectorAll('tbody tr');
             let presentCount = 0;
-            let absentCount = 0;
             
             rows.forEach(row => {
                 const presentBtn = row.querySelector('.present-btn');
                 if (presentBtn && presentBtn.classList.contains('present-active')) {
                     presentCount++;
-                } else {
-                    absentCount++;
                 }
             });
+            
+            const absentCount = totalStudents - presentCount;
             
             document.getElementById('presentCount').textContent = presentCount;
             document.getElementById('absentCount').textContent = absentCount;
         }
-        
-        function toggleODMenu(event, button, regNo) {
-            event.stopPropagation();
-            const dropdownId = button.parentElement.querySelector('.od-dropdown-content');
-            const allMenus = document.querySelectorAll('.od-dropdown-content');
-            
-            // Close all other menus
-            allMenus.forEach(menu => {
-                if (menu !== dropdownId) {
-                    menu.style.display = 'none';
-                }
-            });
-            
-            // Toggle current menu
-            if (dropdownId.style.display === 'block') {
-                dropdownId.style.display = 'none';
-                activeODMenu = null;
-            } else {
-                // Position the menu
-                const rect = button.getBoundingClientRect();
-                dropdownId.style.display = 'block';
-                dropdownId.style.position = 'fixed';
-                dropdownId.style.top = (rect.bottom + 5) + 'px';
-                dropdownId.style.left = (rect.left) + 'px';
-                
-                // Adjust if off screen
-                const menuRect = dropdownId.getBoundingClientRect();
-                if (menuRect.right > window.innerWidth) {
-                    dropdownId.style.left = (window.innerWidth - menuRect.width - 10) + 'px';
-                }
-                if (menuRect.bottom > window.innerHeight) {
-                    dropdownId.style.top = (rect.top - menuRect.height - 5) + 'px';
-                }
-                
-                activeODMenu = dropdownId;
-            }
-        }
-        
-        // Close menus when clicking outside
-        document.addEventListener('click', function(event) {
-            if (!event.target.closest('.od-dropdown')) {
-                const allMenus = document.querySelectorAll('.od-dropdown-content');
-                allMenus.forEach(menu => {
-                    menu.style.display = 'none';
-                });
-                activeODMenu = null;
-            }
-        });
         
         function markAttendance(button, regNo, status) {
             const row = button.closest('tr');
@@ -685,6 +650,42 @@
             });
         }
         
+        function toggleODMenu(event, button, regNo) {
+            event.stopPropagation();
+            const dropdownId = button.parentElement.querySelector('.od-dropdown-content');
+            const allMenus = document.querySelectorAll('.od-dropdown-content');
+            
+            allMenus.forEach(menu => {
+                if (menu !== dropdownId) menu.style.display = 'none';
+            });
+            
+            if (dropdownId.style.display === 'block') {
+                dropdownId.style.display = 'none';
+            } else {
+                const rect = button.getBoundingClientRect();
+                dropdownId.style.display = 'block';
+                dropdownId.style.position = 'fixed';
+                dropdownId.style.top = (rect.bottom + 5) + 'px';
+                dropdownId.style.left = (rect.left) + 'px';
+                
+                const menuRect = dropdownId.getBoundingClientRect();
+                if (menuRect.right > window.innerWidth) {
+                    dropdownId.style.left = (window.innerWidth - menuRect.width - 10) + 'px';
+                }
+                if (menuRect.bottom > window.innerHeight) {
+                    dropdownId.style.top = (rect.top - menuRect.height - 5) + 'px';
+                }
+            }
+        }
+        
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.od-dropdown')) {
+                document.querySelectorAll('.od-dropdown-content').forEach(menu => {
+                    menu.style.display = 'none';
+                });
+            }
+        });
+        
         function showLoading() {
             document.getElementById('loadingOverlay').classList.add('active');
         }
@@ -694,7 +695,7 @@
         }
         
         function markOD(regNo, activityTypeId, activityName) {
-            if (confirm(`🎯 Mark ${regNo} as ON DUTY for "${activityName}"?\n\nThis will mark them PRESENT for Period ${currentPeriod}.`)) {
+            if (confirm(`🎯 Mark ${regNo} as ON DUTY for "${activityName}"?`)) {
                 showLoading();
                 
                 fetch('/staff_mark_od', {
@@ -714,7 +715,7 @@
                     if (data.success) {
                         const rows = document.querySelectorAll('tbody tr');
                         for (let row of rows) {
-                            const regCell = row.querySelector('td:nth-child(2)');
+                            const regCell = row.querySelector('.reg-cell');
                             if (regCell && regCell.textContent.trim() === regNo) {
                                 const presentBtn = row.querySelector('.present-btn');
                                 const absentBtn = row.querySelector('.absent-btn');
@@ -733,10 +734,7 @@
                             }
                         }
                         alert(`✅ OD marked for ${regNo} - ${activityName}`);
-                        
-                        // Close the OD menu
-                        const allMenus = document.querySelectorAll('.od-dropdown-content');
-                        allMenus.forEach(menu => menu.style.display = 'none');
+                        document.querySelectorAll('.od-dropdown-content').forEach(menu => menu.style.display = 'none');
                     } else {
                         alert('❌ Error: ' + data.error);
                     }
@@ -854,7 +852,6 @@
             
             if (confirm(`Save all attendance marks for Period ${currentPeriod}?`)) {
                 window.removeEventListener('beforeunload', beforeUnloadHandler);
-                hasUnsavedChanges = false;
                 window.location.href = "{{ url_for('save_attendance') }}";
             }
         }
@@ -863,7 +860,6 @@
             if (markedStudents.size > 0) {
                 if (confirm(`Discard all unsaved changes for Period ${currentPeriod}?`)) {
                     window.removeEventListener('beforeunload', beforeUnloadHandler);
-                    hasUnsavedChanges = false;
                     window.location.href = "{{ url_for('clear_temp_attendance') }}";
                 }
             } else {
@@ -897,8 +893,9 @@
         
         window.addEventListener('beforeunload', beforeUnloadHandler);
         
-        updateUnsavedIndicator();
+        // Initial update
         updateStatistics();
+        updateUnsavedIndicator();
     </script>
 </body>
 </html>

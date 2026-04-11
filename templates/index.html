@@ -19,33 +19,6 @@
             justify-content: center;
             align-items: center;
             padding: 20px;
-            position: relative;
-            overflow-x: hidden;
-        }
-
-        .bubble {
-            position: absolute;
-            bottom: -100px;
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            animation: rise 10s infinite ease-in;
-            z-index: 0;
-        }
-
-        @keyframes rise {
-            0% {
-                bottom: -100px;
-                transform: translateX(0);
-            }
-            50% {
-                transform: translateX(100px);
-            }
-            100% {
-                bottom: 1080px;
-                transform: translateX(-200px);
-            }
         }
 
         .container {
@@ -58,7 +31,6 @@
             padding: 30px;
             position: relative;
             z-index: 1;
-            backdrop-filter: blur(10px);
         }
 
         /* Logo Section */
@@ -250,7 +222,6 @@
             height: 100%;
             background: rgba(0,0,0,0.6);
             z-index: 1000;
-            backdrop-filter: blur(5px);
         }
 
         .modal-content {
@@ -350,14 +321,6 @@
     </style>
 </head>
 <body>
-    <div class="bubble" style="left: 10%; width: 60px; height: 60px; animation-duration: 12s;"></div>
-    <div class="bubble" style="left: 20%; width: 30px; height: 30px; animation-duration: 8s; animation-delay: 2s;"></div>
-    <div class="bubble" style="left: 35%; width: 80px; height: 80px; animation-duration: 15s; animation-delay: 1s;"></div>
-    <div class="bubble" style="left: 50%; width: 45px; height: 45px; animation-duration: 10s; animation-delay: 4s;"></div>
-    <div class="bubble" style="left: 65%; width: 55px; height: 55px; animation-duration: 13s; animation-delay: 0s;"></div>
-    <div class="bubble" style="left: 80%; width: 35px; height: 35px; animation-duration: 9s; animation-delay: 3s;"></div>
-    <div class="bubble" style="left: 90%; width: 70px; height: 70px; animation-duration: 11s; animation-delay: 5s;"></div>
-
     <div class="container">
         <!-- Logo Section -->
         <div class="logo-section">
@@ -374,7 +337,7 @@
         {% endif %}
         
         <div class="head-container">
-            <button onclick="handleHeadClick()" class="head-btn">👨‍💼 Head Dashboard</button>
+            <button onclick="handleHeadClick()" class="head-btn">👨‍💼 Admin Dashboard</button>
         </div>
         
         <div class="role-row">
@@ -515,10 +478,9 @@
 
     <div id="headPasswordModal" class="modal">
         <div class="modal-content">
-            <h3>🔐 Head Dashboard Access</h3>
+            <h3>🔐 Admin Dashboard Access</h3>
             <p style="margin-bottom: 15px; color: #666;">Enter admin password to continue</p>
             <input type="password" id="headPassword" placeholder="Admin Password" autofocus>
-            <p style="margin-top: 10px; font-size: 0.8em; color: #999;">Default password: <strong>admin123</strong></p>
             <div class="modal-buttons">
                 <button class="save" onclick="verifyHeadPassword()">Verify</button>
                 <button class="cancel" onclick="closeHeadModal()">Cancel</button>
