@@ -1,37 +1,36 @@
-# ==========================================
-# PROTECT YOUR PRIVATE DATA!
-# ==========================================
-
-# Your Real Data - NEVER UPLOAD!
-students.xlsx
-staff.xlsx
-attendance.xlsx
-attendance.db
-*.db
-*.sqlite
-
-# Database Folder
-instance/
-data/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
 
 # Virtual Environment
-env/
 venv/
-__pycache__/
-*.pyc
+env/
+ENV/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
 
 # Uploads
 uploads/
-static/uploads/
 
-# Environment Variables
+# Environment variables
 .env
 .env.local
 
-# IDE Files
+# IDE
 .vscode/
 .idea/
+*.swp
+*.swo
 
-# OS Files
+# OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
