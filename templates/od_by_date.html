@@ -11,13 +11,11 @@
             box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 20px;
         }
-
         .container {
             background: white;
             border-radius: 20px;
@@ -26,7 +24,6 @@
             margin: 0 auto;
             padding: 30px;
         }
-
         .header {
             display: flex;
             justify-content: space-between;
@@ -37,26 +34,14 @@
             flex-wrap: wrap;
             gap: 15px;
         }
-
-        .header h1 {
-            color: #333;
-            font-size: 1.8em;
-        }
-
+        .header h1 { color: #333; font-size: 1.5em; }
         .back-btn {
             background: #6c757d;
             color: white;
             padding: 8px 16px;
             text-decoration: none;
             border-radius: 8px;
-            transition: all 0.3s;
         }
-
-        .back-btn:hover {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-
         .date-form {
             background: #f8f9fa;
             padding: 20px;
@@ -64,22 +49,12 @@
             margin-bottom: 30px;
             text-align: center;
         }
-
-        .date-form label {
-            font-size: 1.1em;
-            font-weight: 500;
-            color: #333;
-            margin-right: 15px;
-        }
-
         .date-form input {
             padding: 10px 15px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
-            font-size: 1em;
-            margin-right: 15px;
+            margin: 0 15px;
         }
-
         .date-form button {
             background: #17a2b8;
             color: white;
@@ -87,19 +62,7 @@
             padding: 10px 25px;
             border-radius: 8px;
             cursor: pointer;
-            font-weight: 600;
-            transition: all 0.3s;
         }
-
-        .date-form button:hover {
-            background: #138496;
-            transform: translateY(-2px);
-        }
-
-        .results-section {
-            margin-top: 20px;
-        }
-
         .results-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -107,30 +70,20 @@
             border-radius: 10px;
             margin-bottom: 20px;
         }
-
         .stats {
             background: #e8f4f8;
             padding: 12px 20px;
             border-radius: 8px;
             margin-bottom: 20px;
             text-align: center;
-            color: #0066cc;
-            font-weight: 500;
         }
-
         .student-card {
             background: #f8f9fa;
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 15px;
             box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: transform 0.2s;
         }
-
-        .student-card:hover {
-            transform: translateX(5px);
-        }
-
         .student-info {
             display: flex;
             justify-content: space-between;
@@ -141,48 +94,26 @@
             padding-bottom: 10px;
             border-bottom: 1px solid #e0e0e0;
         }
-
-        .student-name {
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .student-reg {
-            color: #666;
-            font-size: 0.9em;
-        }
-
+        .student-name { font-size: 1.1em; font-weight: bold; color: #333; }
+        .student-reg { color: #666; font-size: 0.85em; }
         .student-class {
             background: #17a2b8;
             color: white;
             padding: 4px 12px;
             border-radius: 20px;
-            font-size: 0.8em;
+            font-size: 0.75em;
         }
-
-        .od-details {
-            margin-top: 10px;
-        }
-
         .od-table {
             width: 100%;
             border-collapse: collapse;
             margin-top: 10px;
         }
-
         .od-table th, .od-table td {
-            padding: 8px;
+            padding: 10px;
             text-align: left;
             border-bottom: 1px solid #e0e0e0;
         }
-
-        .od-table th {
-            background: #e9ecef;
-            color: #333;
-            font-weight: 600;
-        }
-
+        .od-table th { background: #e9ecef; color: #333; font-weight: 600; }
         .period-badge {
             display: inline-block;
             background: #17a2b8;
@@ -191,7 +122,6 @@
             border-radius: 20px;
             font-size: 0.75em;
         }
-
         .activity-badge {
             display: inline-block;
             background: #ffc107;
@@ -199,36 +129,16 @@
             padding: 3px 10px;
             border-radius: 20px;
             font-size: 0.75em;
-            margin-right: 5px;
         }
-
         .no-data {
             text-align: center;
             padding: 50px;
             color: #999;
-            background: #f8f9fa;
-            border-radius: 10px;
         }
-
         @media (max-width: 768px) {
-            .container {
-                padding: 20px;
-            }
-            .student-info {
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .date-form input {
-                margin-bottom: 10px;
-                width: 100%;
-            }
-            .date-form button {
-                width: 100%;
-            }
-            .od-table th, .od-table td {
-                padding: 6px;
-                font-size: 0.8em;
-            }
+            .container { padding: 20px; }
+            .date-form input { margin: 10px 0; width: 100%; }
+            .date-form button { width: 100%; }
         }
     </style>
 </head>
@@ -248,57 +158,45 @@
         </div>
 
         {% if selected_date %}
-        <div class="results-section">
-            <div class="results-header">
-                <h2>OD Records for {{ selected_date.strftime('%d-%m-%Y') }}</h2>
-            </div>
-
-            {% if students %}
-            <div class="stats">
-                Total Students with OD: <strong>{{ students|length }}</strong>
-            </div>
-
-            {% for student in students %}
-            <div class="student-card">
-                <div class="student-info">
-                    <div>
-                        <span class="student-name">{{ student.name }}</span>
-                        <span class="student-reg"> ({{ student.register_number }})</span>
-                    </div>
-                    <div>
-                        <span class="student-class">{{ student.year }} - Section {{ student.section }}</span>
-                        <span class="student-class" style="background: #6c757d;">Batch: {{ student.batch }}</span>
-                    </div>
-                </div>
-                <div class="od-details">
-                    <table class="od-table">
-                        <thead>
-                            <tr>
-                                <th>Period</th>
-                                <th>Activity Type</th>
-                                <th>Activity Name</th>
-                            </thead>
-                        </thead>
-                        <tbody>
-                            {% for od in student.od_details %}
-                            <tr>
-                                <td><span class="period-badge">Period {{ od.period }}</span></div>
-                                <td><span class="activity-badge">{{ od.activity_type }}</span></div>
-                                <td>{{ od.activity_name }}</div>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            {% endfor %}
-
-            {% else %}
-            <div class="no-data">
-                No OD records found for {{ selected_date.strftime('%d-%m-%Y') }}
-            </div>
-            {% endif %}
+        <div class="results-header">
+            <h2>OD Records for {{ selected_date.strftime('%d-%m-%Y') }}</h2>
         </div>
+
+        {% if students %}
+        <div class="stats">Total Students with OD: <strong>{{ students|length }}</strong></div>
+
+        {% for student in students %}
+        <div class="student-card">
+            <div class="student-info">
+                <div>
+                    <span class="student-name">{{ student.name }}</span>
+                    <span class="student-reg"> ({{ student.register_number }})</span>
+                </div>
+                <div>
+                    <span class="student-class">{{ student.year }} - Section {{ student.section }}</span>
+                    <span class="student-class" style="background: #6c757d;">Batch: {{ student.batch }}</span>
+                </div>
+            </div>
+            <table class="od-table">
+                <thead>
+                    <tr><th>Period</th><th>Activity Type</th><th>Activity Name</th></tr>
+                </thead>
+                <tbody>
+                    {% for od in student.od_details %}
+                    <tr>
+                        <td><span class="period-badge">Period {{ od.period }}</span></td>
+                        <td><span class="activity-badge">{{ od.activity_type }}</span></td>
+                        <td>{{ od.activity_name }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endfor %}
+
+        {% else %}
+        <div class="no-data">No OD records found for {{ selected_date.strftime('%d-%m-%Y') }}</div>
+        {% endif %}
         {% endif %}
     </div>
 </body>

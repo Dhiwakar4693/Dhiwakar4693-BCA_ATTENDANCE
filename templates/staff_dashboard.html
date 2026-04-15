@@ -3,67 +3,221 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Staff Dashboard - {{ department.name }}</title>
+    <title>Staff Dashboard</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #764ba2 100%); min-height: 100vh; padding: 16px; }
-        .container { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 1200px; margin: 0 auto; overflow: hidden; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 16px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1200px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
         .header h2 { font-size: 1.3em; }
-        .subjects-badge { background: rgba(255,255,255,0.2); padding: 5px 12px; border-radius: 20px; font-size: 0.7em; display: inline-block; margin-top: 5px; }
-        .logout-btn { background: #dc3545; color: white; padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; text-decoration: none; }
-        .class-info { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 20px; margin: 20px; border-radius: 12px; }
-        .period-info, .date-info { background: #e8f4f8; padding: 12px 20px; margin: 0 20px 15px 20px; border-radius: 10px; text-align: center; font-weight: bold; }
+        .subjects-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.7em;
+            display: inline-block;
+            margin-top: 5px;
+        }
+        .logout-btn {
+            background: #dc3545;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .class-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 20px;
+            margin: 20px;
+            border-radius: 12px;
+        }
+        .period-info, .date-info {
+            background: #e8f4f8;
+            padding: 12px 20px;
+            margin: 0 20px 15px 20px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: bold;
+        }
         .date-info { background: #f8f9fa; color: #333; }
-        .stats-summary { display: flex; gap: 15px; justify-content: center; margin: 0 20px 20px 20px; flex-wrap: wrap; }
-        .stat-box { background: #f8f9fa; padding: 12px 20px; border-radius: 10px; text-align: center; flex: 1; min-width: 100px; }
+        .stats-summary {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 0 20px 20px 20px;
+            flex-wrap: wrap;
+        }
+        .stat-box {
+            background: #f8f9fa;
+            padding: 12px 20px;
+            border-radius: 10px;
+            text-align: center;
+            flex: 1;
+            min-width: 100px;
+        }
         .stat-box .number { font-size: 1.5em; font-weight: bold; color: #667eea; }
-        .bulk-actions { display: flex; gap: 10px; justify-content: center; margin: 0 20px 20px 20px; flex-wrap: wrap; }
-        .bulk-btn { padding: 8px 20px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; min-width: 120px; }
+        .bulk-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 0 20px 20px 20px;
+            flex-wrap: wrap;
+        }
+        .bulk-btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            flex: 1;
+            min-width: 120px;
+        }
         .bulk-present { background: #28a745; color: white; }
         .bulk-absent { background: #dc3545; color: white; }
-        .table-wrapper { overflow-x: auto; margin: 0 20px 20px 20px; border-radius: 12px; border: 1px solid #e0e0e0; }
-        table { width: 100%; border-collapse: collapse; background: white; min-width: 500px; }
-        th { background: #667eea; color: white; padding: 12px 8px; font-size: 0.8em; }
-        td { padding: 10px 8px; border-bottom: 1px solid #f0f0f0; }
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 0 20px 20px 20px;
+            border-radius: 12px;
+            border: 1px solid #e0e0e0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            min-width: 500px;
+        }
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px 8px;
+            font-size: 0.8em;
+        }
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
         .attendance-cell { text-align: center; min-width: 250px; }
-        .attendance-btn { padding: 8px 15px; margin: 0 3px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.8em; transition: all 0.2s; }
+        .attendance-btn {
+            padding: 8px 15px;
+            margin: 0 3px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.8em;
+            transition: all 0.2s;
+        }
         .btn-present { background: #28a745; color: white; }
         .btn-absent { background: #dc3545; color: white; }
         .btn-od { background: #17a2b8; color: white; }
         .btn-active { opacity: 1; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .btn-inactive { opacity: 0.5; }
-        .button-group { display: flex; gap: 15px; margin: 20px; flex-wrap: wrap; }
-        .btn { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9em; font-weight: 600; flex: 1; }
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin: 20px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            flex: 1;
+        }
         .btn-save { background: #28a745; color: white; }
         .btn-exit { background: #6c757d; color: white; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; justify-content: center; align-items: center; }
-        .modal-content { background: white; border-radius: 15px; padding: 25px; width: 350px; max-width: 90%; }
-        .activity-btn { display: block; width: 100%; padding: 10px; margin: 5px 0; border: 1px solid #ddd; border-radius: 8px; background: #17a2b8; color: white; cursor: pointer; }
-        .saving { opacity: 0.6; pointer-events: none; }
-        @media (max-width: 768px) { .attendance-btn { padding: 5px 8px; font-size: 0.7em; } .button-group { flex-direction: column; } }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            width: 350px;
+            max-width: 90%;
+        }
+        .activity-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #17a2b8;
+            color: white;
+            cursor: pointer;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        @media (max-width: 768px) {
+            .attendance-btn { padding: 5px 8px; font-size: 0.7em; }
+            .button-group { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div>
-                <h2>👨‍🏫 {{ staff_name }}</h2>
-                <div class="subjects-badge">📚 {{ staff_subjects|join(', ') }}</div>
+                <h2>👨‍🏫 <span id="staffName">Loading...</span></h2>
+                <div class="subjects-badge">📚 <span id="staffSubjects">Loading...</span></div>
             </div>
             <a href="#" class="logout-btn" id="logoutBtn">🚪 Logout</a>
         </div>
 
         <div class="class-info">
-            <h3>{{ year }} - Section {{ section }}</h3>
-            <p>{{ department.name }} | Total: {{ students|length }} Students</p>
+            <h3><span id="yearSection">Loading...</span></h3>
+            <p><span id="deptName">Loading...</span> | Total: <span id="totalStudents">0</span> Students</p>
         </div>
 
-        <div class="period-info">📊 Period {{ period }}</div>
-        <div class="date-info">📅 {{ today }}</div>
+        <div class="period-info">📊 Period <span id="periodValue">-</span></div>
+        <div class="date-info">📅 <span id="dateValue">-</span></div>
 
         <div class="stats-summary">
-            <div class="stat-box"><div class="number" id="totalCount">{{ students|length }}</div><div>Total</div></div>
+            <div class="stat-box"><div class="number" id="totalCount">0</div><div>Total</div></div>
             <div class="stat-box"><div class="number" id="presentCount">0</div><div>Present</div></div>
             <div class="stat-box"><div class="number" id="absentCount">0</div><div>Absent</div></div>
         </div>
@@ -74,26 +228,16 @@
         </div>
 
         <div class="table-wrapper">
-            <table>
+            <div id="loadingMessage" class="loading">Loading students...</div>
+            <table id="attendanceTable" style="display: none;">
                 <thead>
-                    <tr><th>Reg No</th><th>Student Name</th><th>Attendance</th></tr>
-                </thead>
-                <tbody>
-                    {% for student in students %}
-                    {% set status = attendance_dict.get(student.id, {}).get(period) %}
-                    <tr id="row-{{ student.id }}">
-                        <td>{{ student.register_number }}</td>
-                        <td>{{ student.name }}</td>
-                        <td class="attendance-cell">
-                            <button class="attendance-btn btn-present {% if status == 'present' %}btn-active{% else %}btn-inactive{% endif %}" 
-                                    data-id="{{ student.id }}" data-regno="{{ student.register_number }}">✅ Present</button>
-                            <button class="attendance-btn btn-od {% if status == 'od' %}btn-active{% else %}btn-inactive{% endif %}" 
-                                    data-id="{{ student.id }}" data-regno="{{ student.register_number }}">🎯 OD</button>
-                            <button class="attendance-btn btn-absent {% if status == 'absent' %}btn-active{% else %}btn-inactive{% endif %}" 
-                                    data-id="{{ student.id }}" data-regno="{{ student.register_number }}">❌ Absent</button>
-                        </td>
+                    <tr>
+                        <th>Reg No</th>
+                        <th>Student Name</th>
+                        <th>Attendance</th>
                     </tr>
-                    {% endfor %}
+                </thead>
+                <tbody id="studentsTableBody">
                 </tbody>
             </table>
         </div>
@@ -108,65 +252,210 @@
     <div id="odModal" class="modal">
         <div class="modal-content">
             <h3>🎯 Select OD Activity</h3>
-            {% for activity in activity_types %}
-            <button class="activity-btn" data-id="{{ activity.id }}" data-name="{{ activity.name }}">🎯 {{ activity.name }}</button>
-            {% endfor %}
+            <div id="odActivityList"></div>
             <button id="closeModalBtn" style="margin-top:15px; padding:10px; width:100%; background:#6c757d; color:white; border:none; border-radius:8px;">Cancel</button>
         </div>
     </div>
 
     <script>
-    // Get period value safely
-    let currentPeriod = parseInt('{{ period|string }}');
-    let hasChanges = false;
-    let selectedStudentId = null;
-    let selectedRegNo = null;
-    let isSaving = false;
-    
-    console.log('Period value:', currentPeriod);
-    
-    function updateStats() {
-        let present = 0;
-        document.querySelectorAll('.btn-present').forEach(btn => {
-            if (btn.classList.contains('btn-active')) present++;
-        });
-        const total = document.querySelectorAll('.btn-present').length;
-        document.getElementById('presentCount').innerText = present;
-        document.getElementById('absentCount').innerText = total - present;
-    }
-    
-    function updateUI(studentId, status) {
-        const row = document.getElementById('row-' + studentId);
-        if (!row) return;
+        // Global variables
+        var currentPeriod = null;
+        var currentDate = null;
+        var studentsData = [];
+        var activityTypesData = [];
+        var attendanceDict = {};
+        var hasChanges = false;
+        var selectedStudentId = null;
+        var selectedRegNo = null;
+        var selectedPeriod = null;
+        var isSaving = false;
         
-        const presentBtn = row.querySelector('.btn-present');
-        const absentBtn = row.querySelector('.btn-absent');
-        const odBtn = row.querySelector('.btn-od');
+        // Track OD marked per student per period (allows multiple periods but not duplicate in same period)
+        var odMarkedPerPeriod = {};
         
-        // Reset all buttons
-        presentBtn.classList.remove('btn-active');
-        presentBtn.classList.add('btn-inactive');
-        absentBtn.classList.remove('btn-active');
-        absentBtn.classList.add('btn-inactive');
-        odBtn.classList.remove('btn-active');
-        odBtn.classList.add('btn-inactive');
-        
-        // Activate the correct button
-        if (status === 'present') {
-            presentBtn.classList.remove('btn-inactive');
-            presentBtn.classList.add('btn-active');
-        } else if (status === 'absent') {
-            absentBtn.classList.remove('btn-inactive');
-            absentBtn.classList.add('btn-active');
-        } else if (status === 'od') {
-            odBtn.classList.remove('btn-inactive');
-            odBtn.classList.add('btn-active');
+        // Load initial data from server
+        function loadInitialData() {
+            var loadingMsg = document.getElementById('loadingMessage');
+            var table = document.getElementById('attendanceTable');
+            
+            fetch('/get_staff_dashboard_data')
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.success) {
+                        currentPeriod = data.period;
+                        currentDate = data.today;
+                        studentsData = data.students;
+                        activityTypesData = data.activity_types;
+                        attendanceDict = data.attendance_dict;
+                        
+                        // Update UI
+                        document.getElementById('staffName').innerText = data.staff_name;
+                        document.getElementById('staffSubjects').innerText = data.staff_subjects.join(', ');
+                        document.getElementById('yearSection').innerText = data.year + ' - Section ' + data.section;
+                        document.getElementById('deptName').innerText = data.department_name + ' (' + data.department_code + ')';
+                        document.getElementById('totalStudents').innerText = studentsData.length;
+                        document.getElementById('periodValue').innerText = currentPeriod;
+                        document.getElementById('dateValue').innerText = currentDate;
+                        document.getElementById('totalCount').innerText = studentsData.length;
+                        
+                        // Hide loading, show table
+                        loadingMsg.style.display = 'none';
+                        table.style.display = 'table';
+                        
+                        renderStudentsTable();
+                        renderActivityTypes();
+                        updateStats();
+                    } else {
+                        loadingMsg.innerText = 'Error loading data: ' + data.error;
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error loading data:', error);
+                    loadingMsg.innerText = 'Failed to load data. Please refresh the page.';
+                });
         }
-    }
-    
-    async function markAttendance(studentId, regNo, status) {
-        try {
-            const response = await fetch('/update_temp_attendance', {
+        
+        // Render students table
+        function renderStudentsTable() {
+            var tbody = document.getElementById('studentsTableBody');
+            tbody.innerHTML = '';
+            
+            for (var i = 0; i < studentsData.length; i++) {
+                var student = studentsData[i];
+                var studentId = student.id;
+                var regNo = student.register_number;
+                var name = student.name;
+                var periodStr = currentPeriod.toString();
+                var currentStatus = null;
+                
+                // Check attendance dict for existing status
+                if (attendanceDict[studentId] && attendanceDict[studentId][periodStr]) {
+                    currentStatus = attendanceDict[studentId][periodStr];
+                }
+                
+                var row = tbody.insertRow();
+                row.id = 'row-' + studentId;
+                
+                var cell1 = row.insertCell(0);
+                cell1.textContent = regNo;
+                
+                var cell2 = row.insertCell(1);
+                cell2.textContent = name;
+                
+                var cell3 = row.insertCell(2);
+                cell3.className = 'attendance-cell';
+                
+                // Set button classes based on current status
+                var presentClass = 'attendance-btn btn-present';
+                var absentClass = 'attendance-btn btn-absent';
+                var odClass = 'attendance-btn btn-od';
+                
+                if (currentStatus === 'present') {
+                    presentClass += ' btn-active';
+                    absentClass += ' btn-inactive';
+                    odClass += ' btn-inactive';
+                } else if (currentStatus === 'absent') {
+                    presentClass += ' btn-inactive';
+                    absentClass += ' btn-active';
+                    odClass += ' btn-inactive';
+                } else if (currentStatus === 'od') {
+                    presentClass += ' btn-inactive';
+                    absentClass += ' btn-inactive';
+                    odClass += ' btn-active';
+                    // Also track this OD in our tracking object
+                    var odKey = studentId + '_period_' + currentPeriod;
+                    odMarkedPerPeriod[odKey] = true;
+                } else {
+                    presentClass += ' btn-inactive';
+                    absentClass += ' btn-inactive';
+                    odClass += ' btn-inactive';
+                }
+                
+                cell3.innerHTML = '<button class="' + presentClass + '" data-id="' + studentId + '" data-regno="' + regNo + '" data-status="present">✅ Present</button>' +
+                                 '<button class="' + odClass + '" data-id="' + studentId + '" data-regno="' + regNo + '" data-period="' + currentPeriod + '">🎯 OD</button>' +
+                                 '<button class="' + absentClass + '" data-id="' + studentId + '" data-regno="' + regNo + '" data-status="absent">❌ Absent</button>';
+            }
+            
+            attachEventListeners();
+        }
+        
+        // Render activity types
+        function renderActivityTypes() {
+            var container = document.getElementById('odActivityList');
+            container.innerHTML = '';
+            
+            for (var i = 0; i < activityTypesData.length; i++) {
+                var activity = activityTypesData[i];
+                var btn = document.createElement('button');
+                btn.className = 'activity-btn';
+                btn.setAttribute('data-id', activity.id);
+                btn.setAttribute('data-name', activity.name);
+                btn.textContent = '🎯 ' + activity.name;
+                container.appendChild(btn);
+            }
+            
+            var activityBtns = document.querySelectorAll('.activity-btn');
+            for (var i = 0; i < activityBtns.length; i++) {
+                activityBtns[i].addEventListener('click', function(e) {
+                    var activityId = this.getAttribute('data-id');
+                    var activityName = this.getAttribute('data-name');
+                    confirmOD(activityId, activityName);
+                });
+            }
+        }
+        
+        // Update statistics
+        function updateStats() {
+            var present = 0;
+            var btns = document.querySelectorAll('.btn-present');
+            for (var i = 0; i < btns.length; i++) {
+                if (btns[i].classList.contains('btn-active')) {
+                    present++;
+                }
+            }
+            var total = btns.length;
+            document.getElementById('presentCount').innerText = present;
+            document.getElementById('absentCount').innerText = total - present;
+        }
+        
+        // Mark attendance (Present/Absent)
+        function markAttendance(button, studentId, regNo, status) {
+            var row = document.getElementById('row-' + studentId);
+            var presentBtn = row.querySelector('.btn-present');
+            var absentBtn = row.querySelector('.btn-absent');
+            var odBtn = row.querySelector('.btn-od');
+            
+            // Clear OD tracking for this specific period if changing from OD
+            var odKey = studentId + '_period_' + currentPeriod;
+            if (odMarkedPerPeriod[odKey]) {
+                delete odMarkedPerPeriod[odKey];
+            }
+            
+            // Reset all buttons
+            presentBtn.classList.remove('btn-active');
+            presentBtn.classList.add('btn-inactive');
+            absentBtn.classList.remove('btn-active');
+            absentBtn.classList.add('btn-inactive');
+            odBtn.classList.remove('btn-active');
+            odBtn.classList.add('btn-inactive');
+            
+            // Activate clicked button
+            if (status === 'present') {
+                presentBtn.classList.remove('btn-inactive');
+                presentBtn.classList.add('btn-active');
+            } else if (status === 'absent') {
+                absentBtn.classList.remove('btn-inactive');
+                absentBtn.classList.add('btn-active');
+            }
+            
+            // Update local dict
+            if (!attendanceDict[studentId]) {
+                attendanceDict[studentId] = {};
+            }
+            attendanceDict[studentId][currentPeriod] = status;
+            
+            // Send to server
+            fetch('/update_temp_attendance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -175,166 +464,217 @@
                     period: currentPeriod,
                     status: status
                 })
-            });
-            const data = await response.json();
-            if (data.success) {
-                updateUI(studentId, status);
-                hasChanges = true;
-                updateStats();
-                console.log('Marked:', regNo, 'as', status);
-            } else {
-                alert('Error: ' + data.error);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Network error. Please try again.');
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    hasChanges = true;
+                    updateStats();
+                }
+            })
+            .catch(function(error) { console.error('Error:', error); });
         }
-    }
-    
-    function openODModal(studentId, regNo) {
-        selectedStudentId = studentId;
-        selectedRegNo = regNo;
-        document.getElementById('odModal').style.display = 'flex';
-    }
-    
-    function closeODModal() {
-        document.getElementById('odModal').style.display = 'none';
-        selectedStudentId = null;
-        selectedRegNo = null;
-    }
-    
-    async function confirmOD(activityId, activityName) {
-        if (!selectedStudentId) return;
         
-        try {
-            // First mark as OD (which will be treated as Present)
-            const response = await fetch('/staff_mark_od', {
+        // Open OD modal
+        function openODModal(studentId, regNo, period) {
+            selectedStudentId = studentId;
+            selectedRegNo = regNo;
+            selectedPeriod = period;
+            document.getElementById('odModal').style.display = 'flex';
+        }
+        
+        // Close OD modal
+        function closeODModal() {
+            document.getElementById('odModal').style.display = 'none';
+            selectedStudentId = null;
+            selectedRegNo = null;
+            selectedPeriod = null;
+        }
+        
+        // Confirm OD
+        function confirmOD(activityId, activityName) {
+            if (!selectedStudentId) return;
+            
+            // Create unique key for student + period
+            var odKey = selectedStudentId + '_period_' + selectedPeriod;
+            
+            // Check if already marked OD for this student in THIS SPECIFIC period
+            if (odMarkedPerPeriod[odKey]) {
+                alert('⚠️ OD already marked for this student on Period ' + selectedPeriod + '!');
+                closeODModal();
+                return;
+            }
+            
+            var row = document.getElementById('row-' + selectedStudentId);
+            var presentBtn = row.querySelector('.btn-present');
+            var absentBtn = row.querySelector('.btn-absent');
+            var odBtn = row.querySelector('.btn-od');
+            
+            // Check if already marked as OD in UI for this period
+            if (odBtn.classList.contains('btn-active')) {
+                alert('⚠️ This student is already marked as OD for Period ' + selectedPeriod + '!');
+                closeODModal();
+                return;
+            }
+            
+            // Update UI
+            presentBtn.classList.remove('btn-active');
+            presentBtn.classList.add('btn-inactive');
+            absentBtn.classList.remove('btn-active');
+            absentBtn.classList.add('btn-inactive');
+            odBtn.classList.remove('btn-inactive');
+            odBtn.classList.add('btn-active');
+            
+            // Send to server
+            fetch('/staff_mark_od', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     student_id: selectedStudentId,
                     reg_no: selectedRegNo,
-                    period: currentPeriod,
-                    date: '{{ today }}',
+                    period: selectedPeriod,
+                    date: currentDate,
                     activity_type_id: activityId,
                     activity_name: activityName
                 })
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    hasChanges = true;
+                    updateStats();
+                    // Mark this specific period as OD for this student
+                    odMarkedPerPeriod[odKey] = true;
+                    closeODModal();
+                    alert('✅ OD marked for ' + selectedRegNo + ' - ' + activityName + ' (Period ' + selectedPeriod + ')');
+                } else {
+                    // Revert UI on error
+                    odBtn.classList.remove('btn-active');
+                    odBtn.classList.add('btn-inactive');
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(function(error) {
+                console.error('Error:', error);
+                odBtn.classList.remove('btn-active');
+                odBtn.classList.add('btn-inactive');
+                alert('Failed to mark OD');
             });
-            const data = await response.json();
-            if (data.success) {
-                // Update UI to show OD (which represents Present)
-                updateUI(selectedStudentId, 'od');
-                hasChanges = true;
-                updateStats();
+        }
+        
+        // Attach event listeners
+        function attachEventListeners() {
+            var presentBtns = document.querySelectorAll('.btn-present');
+            var absentBtns = document.querySelectorAll('.btn-absent');
+            var odBtns = document.querySelectorAll('.btn-od');
+            
+            for (var i = 0; i < presentBtns.length; i++) {
+                presentBtns[i].addEventListener('click', function(e) {
+                    var studentId = this.getAttribute('data-id');
+                    var regNo = this.getAttribute('data-regno');
+                    markAttendance(this, studentId, regNo, 'present');
+                });
+            }
+            
+            for (var i = 0; i < absentBtns.length; i++) {
+                absentBtns[i].addEventListener('click', function(e) {
+                    var studentId = this.getAttribute('data-id');
+                    var regNo = this.getAttribute('data-regno');
+                    markAttendance(this, studentId, regNo, 'absent');
+                });
+            }
+            
+            for (var i = 0; i < odBtns.length; i++) {
+                odBtns[i].addEventListener('click', function(e) {
+                    var studentId = this.getAttribute('data-id');
+                    var regNo = this.getAttribute('data-regno');
+                    var period = this.getAttribute('data-period');
+                    openODModal(studentId, regNo, period);
+                });
+            }
+        }
+        
+        // Bulk actions
+        document.getElementById('bulkPresentBtn').addEventListener('click', function() {
+            if (confirm('Mark ALL students as PRESENT?')) {
+                var btns = document.querySelectorAll('.btn-present');
+                for (var i = 0; i < btns.length; i++) {
+                    var studentId = btns[i].getAttribute('data-id');
+                    var regNo = btns[i].getAttribute('data-regno');
+                    markAttendance(btns[i], studentId, regNo, 'present');
+                }
+                alert('✅ All students marked as PRESENT');
+            }
+        });
+        
+        document.getElementById('bulkAbsentBtn').addEventListener('click', function() {
+            if (confirm('Mark ALL students as ABSENT?')) {
+                var btns = document.querySelectorAll('.btn-absent');
+                for (var i = 0; i < btns.length; i++) {
+                    var studentId = btns[i].getAttribute('data-id');
+                    var regNo = btns[i].getAttribute('data-regno');
+                    markAttendance(btns[i], studentId, regNo, 'absent');
+                }
+                alert('✅ All students marked as ABSENT');
+            }
+        });
+        
+        // Save and exit
+        document.getElementById('saveBtn').addEventListener('click', function() {
+            if (isSaving) return;
+            
+            if (!hasChanges) {
+                if (confirm('No changes made. Exit anyway?')) {
+                    window.location.href = '/clear_temp_attendance';
+                }
+                return;
+            }
+            
+            if (confirm('Save all changes and exit?')) {
+                isSaving = true;
+                window.location.href = '/save_attendance';
+            }
+        });
+        
+        // Discard and exit
+        document.getElementById('discardBtn').addEventListener('click', function() {
+            if (hasChanges && !confirm('Discard all changes and exit?')) {
+                return;
+            }
+            window.location.href = '/clear_temp_attendance';
+        });
+        
+        // Close modal
+        document.getElementById('closeModalBtn').addEventListener('click', closeODModal);
+        window.addEventListener('click', function(e) {
+            if (e.target === document.getElementById('odModal')) {
                 closeODModal();
-                alert('✅ OD marked for ' + selectedRegNo + ' - ' + activityName + '\n\nStudent will be marked as PRESENT for this period.');
-            } else {
-                alert('Error: ' + data.error);
             }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Failed to mark OD');
-        }
-    }
-    
-    // Event Listeners
-    document.querySelectorAll('.btn-present').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const studentId = btn.getAttribute('data-id');
-            const regNo = btn.getAttribute('data-regno');
-            markAttendance(studentId, regNo, 'present');
         });
-    });
-    
-    document.querySelectorAll('.btn-absent').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const studentId = btn.getAttribute('data-id');
-            const regNo = btn.getAttribute('data-regno');
-            markAttendance(studentId, regNo, 'absent');
-        });
-    });
-    
-    document.querySelectorAll('.btn-od').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const studentId = btn.getAttribute('data-id');
-            const regNo = btn.getAttribute('data-regno');
-            openODModal(studentId, regNo);
-        });
-    });
-    
-    document.querySelectorAll('.activity-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const activityId = btn.getAttribute('data-id');
-            const activityName = btn.getAttribute('data-name');
-            confirmOD(activityId, activityName);
-        });
-    });
-    
-    document.getElementById('closeModalBtn').addEventListener('click', closeODModal);
-    window.addEventListener('click', (e) => { if (e.target === document.getElementById('odModal')) closeODModal(); });
-    
-    document.getElementById('bulkPresentBtn').addEventListener('click', async () => {
-        if (confirm('Mark ALL students as PRESENT?')) {
-            const btns = document.querySelectorAll('.btn-present');
-            for (const btn of btns) {
-                const studentId = btn.getAttribute('data-id');
-                const regNo = btn.getAttribute('data-regno');
-                await markAttendance(studentId, regNo, 'present');
-            }
-            alert('✅ All students marked as PRESENT');
-        }
-    });
-    
-    document.getElementById('bulkAbsentBtn').addEventListener('click', async () => {
-        if (confirm('Mark ALL students as ABSENT?')) {
-            const btns = document.querySelectorAll('.btn-absent');
-            for (const btn of btns) {
-                const studentId = btn.getAttribute('data-id');
-                const regNo = btn.getAttribute('data-regno');
-                await markAttendance(studentId, regNo, 'absent');
-            }
-            alert('✅ All students marked as ABSENT');
-        }
-    });
-    
-    document.getElementById('saveBtn').addEventListener('click', () => {
-        if (isSaving) return;
-        if (!hasChanges && confirm('No changes made. Exit anyway?')) {
-            window.location.href = "{{ url_for('clear_temp_attendance') }}";
-        } else if (hasChanges && confirm('Save all changes and exit?')) {
-            isSaving = true;
-            document.getElementById('saveBtn').classList.add('saving');
-            document.getElementById('saveBtn').innerText = '💾 Saving...';
-            window.location.href = "{{ url_for('save_attendance') }}";
-        }
-    });
-    
-    document.getElementById('discardBtn').addEventListener('click', () => {
-        if (hasChanges && !confirm('Discard all changes and exit?')) return;
-        window.location.href = "{{ url_for('clear_temp_attendance') }}";
-    });
-    
-    document.getElementById('logoutBtn').addEventListener('click', (e) => {
-        e.preventDefault();
-        if (hasChanges && !confirm('You have unsaved changes! Save before logging out?')) {
-            window.location.href = "{{ url_for('logout') }}";
-        } else if (hasChanges) {
-            document.getElementById('saveBtn').click();
-        } else {
-            window.location.href = "{{ url_for('logout') }}";
-        }
-    });
-    
-    window.addEventListener('beforeunload', (e) => {
-        if (hasChanges && !isSaving) {
+        
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
             e.preventDefault();
-            e.returnValue = 'You have unsaved changes!';
-            return e.returnValue;
-        }
-    });
-    
-    updateStats();
-    console.log('Staff dashboard loaded successfully');
-</script>
+            if (hasChanges && !confirm('You have unsaved changes! Save before logging out?')) {
+                window.location.href = '/logout';
+            } else if (hasChanges) {
+                document.getElementById('saveBtn').click();
+            } else {
+                window.location.href = '/logout';
+            }
+        });
+        
+        // Before unload warning
+        window.addEventListener('beforeunload', function(e) {
+            if (hasChanges && !isSaving) {
+                e.preventDefault();
+                e.returnValue = 'You have unsaved changes!';
+                return e.returnValue;
+            }
+        });
+        
+        // Initialize
+        loadInitialData();
+    </script>
 </body>
 </html>

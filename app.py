@@ -786,21 +786,25 @@ def update_temp_attendance():
     if session.get('role') != 'staff':
         return jsonify({'success': False, 'error': 'Unauthorized'})
     
-    data = request.get_json()
-    student_id = data.get('student_id')
-    reg_no = data.get('reg_no')
-    period = data.get('period')
-    status = data.get('status')
-    
-    temp_attendance = session.get('temp_attendance', {})
-    if str(student_id) not in temp_attendance:
-        temp_attendance[str(student_id)] = {}
-    
-    temp_attendance[str(student_id)][str(period)] = status
-    session['temp_attendance'] = temp_attendance
-    session.modified = True
-    
-    return jsonify({'success': True})
+    try:
+        data = request.get_json()
+        student_id = str(data.get('student_id'))
+        reg_no = data.get('reg_no')
+        period = str(data.get('period'))
+        status = data.get('status')
+        
+        temp_attendance = session.get('temp_attendance', {})
+        
+        if student_id not in temp_attendance:
+            temp_attendance[student_id] = {}
+        
+        temp_attendance[student_id][period] = status
+        session['temp_attendance'] = temp_attendance
+        session.modified = True
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @app.route('/staff_mark_od', methods=['POST'])
@@ -808,37 +812,62 @@ def staff_mark_od():
     if session.get('role') != 'staff':
         return jsonify({'success': False, 'error': 'Unauthorized'})
     
-    data = request.get_json()
-    student_id = data.get('student_id')
-    reg_no = data.get('reg_no')
-    period = data.get('period')
-    date_str = data.get('date')
-    activity_type_id = data.get('activity_type_id')
-    activity_name = data.get('activity_name')
-    
-    temp_attendance = session.get('temp_attendance', {})
-    
-    # Store OD data separately
-    if 'od_data' not in temp_attendance:
-        temp_attendance['od_data'] = {}
-    
-    temp_attendance['od_data'][str(student_id)] = {
-        'activity_type_id': activity_type_id,
-        'activity_name': activity_name,
-        'date': date_str,
-        'reg_no': reg_no
-    }
-    
-    # Mark as OD (which will be converted to present on save)
-    if str(student_id) not in temp_attendance:
-        temp_attendance[str(student_id)] = {}
-    
-    temp_attendance[str(student_id)][str(period)] = 'od'
-    
-    session['temp_attendance'] = temp_attendance
-    session.modified = True
-    
-    return jsonify({'success': True, 'message': f'OD marked for {activity_name}'})
+    try:
+        data = request.get_json()
+        student_id = str(data.get('student_id'))
+        reg_no = data.get('reg_no')
+        period = str(data.get('period'))  # Current period (1-6)
+        date_str = data.get('date')
+        activity_type_id = data.get('activity_type_id')
+        activity_name = data.get('activity_name')
+        
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # IMPORTANT: Check if OD already exists for this student, date, and SPECIFIC period
+        existing_od_db = Extracurricular.query.filter(
+            Extracurricular.student_id == int(student_id),
+            Extracurricular.activity_date == selected_date,
+            Extracurricular.notes.like(f'%_period_{period}')
+        ).first()
+        
+        if existing_od_db:
+            return jsonify({'success': False, 'error': f'OD already exists for this student on Period {period}! Cannot mark duplicate in same period.'})
+        
+        # Check temp attendance for duplicate in same period
+        temp_attendance = session.get('temp_attendance', {})
+        
+        if student_id in temp_attendance and period in temp_attendance[student_id]:
+            if temp_attendance[student_id][period] == 'od':
+                return jsonify({'success': False, 'error': f'OD already marked for this student on Period {period} in current session!'})
+        
+        if student_id not in temp_attendance:
+            temp_attendance[student_id] = {}
+        
+        # Store the OD status for this specific period
+        temp_attendance[student_id][period] = 'od'
+        
+        # Store OD details with period information
+        if 'od_data' not in temp_attendance:
+            temp_attendance['od_data'] = {}
+        
+        # Use unique key combining student_id and period
+        od_key = f"{student_id}_{period}"
+        temp_attendance['od_data'][od_key] = {
+            'student_id': student_id,
+            'reg_no': reg_no,
+            'period': period,
+            'activity_type_id': activity_type_id,
+            'activity_name': activity_name,
+            'date': date_str
+        }
+        
+        session['temp_attendance'] = temp_attendance
+        session.modified = True
+        
+        return jsonify({'success': True, 'message': f'OD marked for Period {period}'})
+    except Exception as e:
+        print(f"Error in staff_mark_od: {e}")
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @app.route('/save_attendance')
@@ -846,88 +875,109 @@ def save_attendance():
     if session.get('role') != 'staff':
         return redirect(url_for('index'))
     
-    temp_attendance = session.get('temp_attendance', {})
-    today = datetime.now().date()
-    staff_id = session.get('staff_id')
-    subject = session.get('subject')
-    
-    saved_count = 0
-    od_saved_count = 0
-    
-    # Get OD data if exists
-    od_data = temp_attendance.get('od_data', {})
-    
-    for student_id_str, data in temp_attendance.items():
-        if student_id_str == 'od_data':
-            continue
-            
-        student_id = int(student_id_str)
+    try:
+        temp_attendance = session.get('temp_attendance', {})
+        today = datetime.now().date()
+        staff_id = session.get('staff_id')
+        subject = session.get('subject')
         
-        for period_str, status in data.items():
-            if period_str == 'od_data' or period_str == 'od_activity':
+        saved_count = 0
+        od_saved_count = 0
+        od_skipped_count = 0
+        
+        # Get OD data
+        od_data = temp_attendance.get('od_data', {})
+        
+        for student_id_str, periods in temp_attendance.items():
+            if student_id_str == 'od_data':
                 continue
                 
-            period_val = int(period_str)
-            final_status = status
+            student_id = int(student_id_str)
             
-            # Check if this student has OD activity
-            if status == 'od':
-                # Get OD data for this student
-                student_od = od_data.get(student_id_str, {})
-                if student_od:
+            for period_str, status in periods.items():
+                if period_str == 'od_data':
+                    continue
+                    
+                period_val = int(period_str)
+                final_status = status
+                
+                # Check if this is an OD for this specific student and period
+                od_key = f"{student_id_str}_{period_str}"
+                if status == 'od' and od_key in od_data:
+                    student_od = od_data[od_key]
                     try:
-                        od_activity = Extracurricular(
-                            student_id=student_id,
-                            activity_type_id=int(student_od.get('activity_type_id')),
-                            activity_date=datetime.strptime(student_od.get('date'), '%Y-%m-%d').date(),
-                            notes=f"OD_{student_od.get('activity_name')}"
-                        )
-                        db.session.add(od_activity)
-                        od_saved_count += 1
-                        final_status = 'present'  # OD overrides to present
-                        print(f"OD saved for student {student_id}: {student_od.get('activity_name')}")
+                        # Check if OD already exists for this student, date, and SPECIFIC period
+                        existing_od = Extracurricular.query.filter(
+                            Extracurricular.student_id == student_id,
+                            Extracurricular.activity_date == datetime.strptime(student_od.get('date'), '%Y-%m-%d').date(),
+                            Extracurricular.notes.like(f'%_period_{period_val}')
+                        ).first()
+                        
+                        if existing_od:
+                            print(f"OD already exists for student {student_id}, period {period_val}, skipping...")
+                            od_skipped_count += 1
+                        else:
+                            od_notes = f"OD_{student_od.get('activity_name')}_period_{period_val}"
+                            
+                            od_activity = Extracurricular(
+                                student_id=student_id,
+                                activity_type_id=int(student_od.get('activity_type_id')),
+                                activity_date=datetime.strptime(student_od.get('date'), '%Y-%m-%d').date(),
+                                notes=od_notes
+                            )
+                            db.session.add(od_activity)
+                            od_saved_count += 1
+                            print(f"OD saved: Student {student_id}, Period {period_val}")
+                        
+                        final_status = 'present'
                     except Exception as e:
                         print(f"Error saving OD: {e}")
-                        final_status = 'present'  # Still mark as present even if OD save fails
-            
-            # Check if attendance already exists
-            existing = Attendance.query.filter_by(
-                student_id=student_id,
-                date=today,
-                period=period_val
-            ).first()
-            
-            if existing:
-                existing.status = final_status
-                existing.marked_by = staff_id
-                existing.subject = subject
-                existing.marked_at = datetime.now()
-                print(f"Updated attendance for student {student_id}, period {period_val}: {final_status}")
-            else:
-                new_attendance = Attendance(
+                
+                # Save or update attendance
+                existing = Attendance.query.filter_by(
                     student_id=student_id,
                     date=today,
-                    period=period_val,
-                    status=final_status,
-                    subject=subject,
-                    marked_by=staff_id,
-                    marked_at=datetime.now()
-                )
-                db.session.add(new_attendance)
-                print(f"Created attendance for student {student_id}, period {period_val}: {final_status}")
-            
-            saved_count += 1
-    
-    db.session.commit()
-    session.clear()
-    
-    flash(f'✅ Attendance saved! {saved_count} records, {od_saved_count} OD activities.', 'success')
-    return redirect(url_for('index'))
+                    period=period_val
+                ).first()
+                
+                if existing:
+                    existing.status = final_status
+                    existing.marked_by = staff_id
+                    existing.subject = subject
+                    existing.marked_at = datetime.now()
+                else:
+                    new_attendance = Attendance(
+                        student_id=student_id,
+                        date=today,
+                        period=period_val,
+                        status=final_status,
+                        subject=subject,
+                        marked_by=staff_id,
+                        marked_at=datetime.now()
+                    )
+                    db.session.add(new_attendance)
+                
+                saved_count += 1
+        
+        db.session.commit()
+        session.pop('temp_attendance', None)
+        
+        if od_skipped_count > 0:
+            flash(f'✅ Attendance saved! {saved_count} records, {od_saved_count} new OD activities. Skipped {od_skipped_count} duplicate OD(s).', 'success')
+        else:
+            flash(f'✅ Attendance saved! {saved_count} records, {od_saved_count} OD activities.', 'success')
+        
+        return redirect(url_for('index'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'❌ Error: {str(e)}', 'error')
+        return redirect(url_for('staff_dashboard'))
+
 
 @app.route('/clear_temp_attendance')
 def clear_temp_attendance():
     session.pop('temp_attendance', None)
-    session.pop('has_unsaved_changes', None)
     return redirect(url_for('index'))
 
 # ==================== STUDENT ROUTES ====================
@@ -1673,11 +1723,13 @@ def od_by_date():
         if date_str:
             selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
             
+            # Get all OD activities for the selected date
             od_activities = Extracurricular.query.filter(
                 Extracurricular.notes.like('OD_%'),
                 Extracurricular.activity_date == selected_date
             ).join(Student).filter(Student.department_id == department_id).all()
             
+            # Group by student
             student_od_map = {}
             for activity in od_activities:
                 if activity.student_id not in student_od_map:
@@ -1689,30 +1741,26 @@ def od_by_date():
                 if student:
                     od_details = []
                     for act in activities:
-                        attendance = Attendance.query.filter_by(
-                            student_id=student.id,
-                            date=selected_date,
-                            status='present'
-                        ).first()
+                        # Extract period from the notes (format: OD_ActivityName_period_X)
+                        period_found = 'Unknown'
+                        activity_name = act.notes.replace('OD_', '')
                         
-                        period_found = None
-                        if attendance:
-                            period_found = attendance.period
-                        else:
-                            attendances = Attendance.query.filter_by(
-                                student_id=student.id,
-                                date=selected_date
-                            ).all()
-                            for att in attendances:
-                                if att.status == 'present':
-                                    period_found = att.period
-                                    break
+                        if '_period_' in act.notes:
+                            try:
+                                period_part = act.notes.split('_period_')[1]
+                                period_found = int(period_part)
+                                activity_name = activity_name.split('_period_')[0]
+                            except:
+                                pass
                         
                         od_details.append({
-                            'activity_name': act.notes.replace('OD_', ''),
+                            'activity_name': activity_name,
                             'activity_type': act.activity_type.name if act.activity_type else 'General',
-                            'period': period_found if period_found else 'Unknown'
+                            'period': period_found
                         })
+                    
+                    # Sort by period number
+                    od_details.sort(key=lambda x: x['period'] if isinstance(x['period'], int) else 999)
                     
                     students_with_od.append({
                         'id': student.id,
@@ -2002,6 +2050,100 @@ def delete_student(student_id):
 def logout():
     session.clear()
     return redirect(url_for('index'))
+
+@app.route('/get_staff_dashboard_data')
+def get_staff_dashboard_data():
+    if session.get('role') != 'staff':
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    
+    try:
+        year = session.get('year')
+        section = session.get('section')
+        period = session.get('period')
+        department_id = session.get('department_id')
+        staff_id = session.get('staff_id')
+        today = datetime.now().date()
+        
+        # Get staff
+        staff = db.session.get(Staff, staff_id)
+        staff_subjects = staff.get_subjects_list() if staff else []
+        
+        # Get department
+        department = db.session.get(Department, department_id)
+        
+        # Get students
+        students = Student.query.filter_by(
+            department_id=department_id,
+            year=year,
+            section=section
+        ).all()
+        
+        # Convert students to dict
+        students_list = []
+        for student in students:
+            students_list.append({
+                'id': student.id,
+                'register_number': student.register_number,
+                'name': student.name,
+                'year': student.year,
+                'section': student.section,
+                'batch': student.batch
+            })
+        
+        # Get existing attendance for TODAY
+        existing_attendance = Attendance.query.filter(
+            Attendance.date == today,
+            Attendance.period == period,
+            Attendance.student_id.in_([s.id for s in students])
+        ).all()
+        
+        # Build attendance dict
+        attendance_dict = {}
+        for att in existing_attendance:
+            if str(att.student_id) not in attendance_dict:
+                attendance_dict[str(att.student_id)] = {}
+            attendance_dict[str(att.student_id)][str(att.period)] = att.status
+        
+        # Get temp attendance from session
+        temp_attendance = session.get('temp_attendance', {})
+        
+        # Merge temp attendance (this overrides existing)
+        for student_id_str, periods in temp_attendance.items():
+            if student_id_str == 'od_data':
+                continue
+            if student_id_str not in attendance_dict:
+                attendance_dict[student_id_str] = {}
+            for period_str, status in periods.items():
+                if period_str != 'od_data':
+                    attendance_dict[student_id_str][period_str] = status
+        
+        # Get activity types
+        activity_types = ActivityType.query.filter_by(department_id=department_id).order_by(ActivityType.name).all()
+        activity_types_list = []
+        for act in activity_types:
+            activity_types_list.append({
+                'id': act.id,
+                'name': act.name
+            })
+        
+        return jsonify({
+            'success': True,
+            'staff_name': staff.name if staff else '',
+            'staff_subjects': staff_subjects,
+            'department_name': department.name if department else '',
+            'department_code': department.code if department else '',
+            'year': year,
+            'section': section,
+            'period': period,
+            'today': today.strftime('%Y-%m-%d'),
+            'students': students_list,
+            'activity_types': activity_types_list,
+            'attendance_dict': attendance_dict
+        })
+        
+    except Exception as e:
+        print(f"Error in get_staff_dashboard_data: {e}")
+        return jsonify({'success': False, 'error': str(e)})
 
 # ==================== MAIN ENTRY POINT ====================
 if __name__ == '__main__':
