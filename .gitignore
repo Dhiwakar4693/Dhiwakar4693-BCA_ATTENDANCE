@@ -33,4 +33,37 @@ uploads/
 Thumbs.db
 
 # Logs
-*.log
+*.log# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# Uploaded files
+uploads/*.xlsx
+uploads/*.csv
+uploads/*.xls
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
