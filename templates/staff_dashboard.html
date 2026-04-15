@@ -270,7 +270,7 @@
         var selectedPeriod = null;
         var isSaving = false;
         
-        // Track OD marked per student per period (allows multiple periods but not duplicate in same period)
+        // Track OD marked per student per period
         var odMarkedPerPeriod = {};
         
         // Load initial data from server
@@ -286,9 +286,8 @@
                         currentDate = data.today;
                         studentsData = data.students;
                         activityTypesData = data.activity_types;
-                        attendanceDict = data.attendance_dict;
+                        attendanceDict = data.attendance_dict || {};
                         
-                        // Update UI
                         document.getElementById('staffName').innerText = data.staff_name;
                         document.getElementById('staffSubjects').innerText = data.staff_subjects.join(', ');
                         document.getElementById('yearSection').innerText = data.year + ' - Section ' + data.section;
@@ -298,7 +297,6 @@
                         document.getElementById('dateValue').innerText = currentDate;
                         document.getElementById('totalCount').innerText = studentsData.length;
                         
-                        // Hide loading, show table
                         loadingMsg.style.display = 'none';
                         table.style.display = 'table';
                         
@@ -328,7 +326,6 @@
                 var periodStr = currentPeriod.toString();
                 var currentStatus = null;
                 
-                // Check attendance dict for existing status
                 if (attendanceDict[studentId] && attendanceDict[studentId][periodStr]) {
                     currentStatus = attendanceDict[studentId][periodStr];
                 }
@@ -345,7 +342,6 @@
                 var cell3 = row.insertCell(2);
                 cell3.className = 'attendance-cell';
                 
-                // Set button classes based on current status
                 var presentClass = 'attendance-btn btn-present';
                 var absentClass = 'attendance-btn btn-absent';
                 var odClass = 'attendance-btn btn-od';
@@ -362,7 +358,6 @@
                     presentClass += ' btn-inactive';
                     absentClass += ' btn-inactive';
                     odClass += ' btn-active';
-                    // Also track this OD in our tracking object
                     var odKey = studentId + '_period_' + currentPeriod;
                     odMarkedPerPeriod[odKey] = true;
                 } else {
@@ -425,13 +420,11 @@
             var absentBtn = row.querySelector('.btn-absent');
             var odBtn = row.querySelector('.btn-od');
             
-            // Clear OD tracking for this specific period if changing from OD
             var odKey = studentId + '_period_' + currentPeriod;
             if (odMarkedPerPeriod[odKey]) {
                 delete odMarkedPerPeriod[odKey];
             }
             
-            // Reset all buttons
             presentBtn.classList.remove('btn-active');
             presentBtn.classList.add('btn-inactive');
             absentBtn.classList.remove('btn-active');
@@ -439,7 +432,6 @@
             odBtn.classList.remove('btn-active');
             odBtn.classList.add('btn-inactive');
             
-            // Activate clicked button
             if (status === 'present') {
                 presentBtn.classList.remove('btn-inactive');
                 presentBtn.classList.add('btn-active');
@@ -448,13 +440,11 @@
                 absentBtn.classList.add('btn-active');
             }
             
-            // Update local dict
             if (!attendanceDict[studentId]) {
                 attendanceDict[studentId] = {};
             }
             attendanceDict[studentId][currentPeriod] = status;
             
-            // Send to server
             fetch('/update_temp_attendance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -475,11 +465,12 @@
             .catch(function(error) { console.error('Error:', error); });
         }
         
-        // Open OD modal
+        // Open OD modal - Store the period from the clicked button
         function openODModal(studentId, regNo, period) {
             selectedStudentId = studentId;
             selectedRegNo = regNo;
             selectedPeriod = period;
+            console.log("Opening OD modal for Period:", selectedPeriod);
             document.getElementById('odModal').style.display = 'flex';
         }
         
@@ -491,16 +482,17 @@
             selectedPeriod = null;
         }
         
-        // Confirm OD
+        // Confirm OD - Use the stored period
         function confirmOD(activityId, activityName) {
             if (!selectedStudentId) return;
             
-            // Create unique key for student + period
-            var odKey = selectedStudentId + '_period_' + selectedPeriod;
+            var periodToMark = selectedPeriod;
+            console.log("Marking OD for Period:", periodToMark);
             
-            // Check if already marked OD for this student in THIS SPECIFIC period
+            var odKey = selectedStudentId + '_period_' + periodToMark;
+            
             if (odMarkedPerPeriod[odKey]) {
-                alert('⚠️ OD already marked for this student on Period ' + selectedPeriod + '!');
+                alert('⚠️ OD already marked for this student on Period ' + periodToMark + '!');
                 closeODModal();
                 return;
             }
@@ -510,9 +502,8 @@
             var absentBtn = row.querySelector('.btn-absent');
             var odBtn = row.querySelector('.btn-od');
             
-            // Check if already marked as OD in UI for this period
             if (odBtn.classList.contains('btn-active')) {
-                alert('⚠️ This student is already marked as OD for Period ' + selectedPeriod + '!');
+                alert('⚠️ This student is already marked as OD for Period ' + periodToMark + '!');
                 closeODModal();
                 return;
             }
@@ -525,14 +516,14 @@
             odBtn.classList.remove('btn-inactive');
             odBtn.classList.add('btn-active');
             
-            // Send to server
+            // Send to server with the correct period
             fetch('/staff_mark_od', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     student_id: selectedStudentId,
                     reg_no: selectedRegNo,
-                    period: selectedPeriod,
+                    period: periodToMark,
                     date: currentDate,
                     activity_type_id: activityId,
                     activity_name: activityName
@@ -541,14 +532,16 @@
             .then(function(response) { return response.json(); })
             .then(function(data) {
                 if (data.success) {
+                    if (!attendanceDict[selectedStudentId]) {
+                        attendanceDict[selectedStudentId] = {};
+                    }
+                    attendanceDict[selectedStudentId][periodToMark] = 'od';
+                    odMarkedPerPeriod[odKey] = true;
                     hasChanges = true;
                     updateStats();
-                    // Mark this specific period as OD for this student
-                    odMarkedPerPeriod[odKey] = true;
                     closeODModal();
-                    alert('✅ OD marked for ' + selectedRegNo + ' - ' + activityName + ' (Period ' + selectedPeriod + ')');
+                    alert('✅ OD marked for ' + selectedRegNo + ' - ' + activityName + ' (Period ' + periodToMark + ')');
                 } else {
-                    // Revert UI on error
                     odBtn.classList.remove('btn-active');
                     odBtn.classList.add('btn-inactive');
                     alert('Error: ' + data.error);
@@ -594,28 +587,167 @@
             }
         }
         
-        // Bulk actions
+        // BULK PRESENT
         document.getElementById('bulkPresentBtn').addEventListener('click', function() {
-            if (confirm('Mark ALL students as PRESENT?')) {
-                var btns = document.querySelectorAll('.btn-present');
-                for (var i = 0; i < btns.length; i++) {
-                    var studentId = btns[i].getAttribute('data-id');
-                    var regNo = btns[i].getAttribute('data-regno');
-                    markAttendance(btns[i], studentId, regNo, 'present');
+            if (confirm('Mark ALL students as PRESENT for Period ' + currentPeriod + '?')) {
+                var allPresentBtns = document.querySelectorAll('.btn-present');
+                var successCount = 0;
+                var totalCount = allPresentBtns.length;
+                
+                this.disabled = true;
+                document.getElementById('bulkAbsentBtn').disabled = true;
+                this.textContent = '⏳ Processing...';
+                
+                function processNext(index) {
+                    if (index >= totalCount) {
+                        document.getElementById('bulkPresentBtn').disabled = false;
+                        document.getElementById('bulkAbsentBtn').disabled = false;
+                        document.getElementById('bulkPresentBtn').textContent = '✅ All Present';
+                        
+                        if (successCount > 0) {
+                            hasChanges = true;
+                            updateStats();
+                            alert('✅ ' + successCount + ' out of ' + totalCount + ' students marked as PRESENT');
+                        } else {
+                            alert('⚠️ No students were marked. Please try again.');
+                        }
+                        return;
+                    }
+                    
+                    var btn = allPresentBtns[index];
+                    var studentId = btn.getAttribute('data-id');
+                    var regNo = btn.getAttribute('data-regno');
+                    
+                    var row = document.getElementById('row-' + studentId);
+                    if (row) {
+                        var presentBtn = row.querySelector('.btn-present');
+                        var absentBtn = row.querySelector('.btn-absent');
+                        var odBtn = row.querySelector('.btn-od');
+                        
+                        presentBtn.classList.remove('btn-inactive');
+                        presentBtn.classList.add('btn-active');
+                        absentBtn.classList.remove('btn-active');
+                        absentBtn.classList.add('btn-inactive');
+                        odBtn.classList.remove('btn-active');
+                        odBtn.classList.add('btn-inactive');
+                    }
+                    
+                    if (!attendanceDict[studentId]) {
+                        attendanceDict[studentId] = {};
+                    }
+                    attendanceDict[studentId][currentPeriod] = 'present';
+                    
+                    var odKey = studentId + '_period_' + currentPeriod;
+                    if (odMarkedPerPeriod[odKey]) {
+                        delete odMarkedPerPeriod[odKey];
+                    }
+                    
+                    fetch('/update_temp_attendance', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            student_id: studentId,
+                            reg_no: regNo,
+                            period: currentPeriod,
+                            status: 'present'
+                        })
+                    })
+                    .then(function(response) { return response.json(); })
+                    .then(function(data) {
+                        if (data.success) {
+                            successCount++;
+                        }
+                        processNext(index + 1);
+                    })
+                    .catch(function(error) {
+                        console.error('Error:', error);
+                        processNext(index + 1);
+                    });
                 }
-                alert('✅ All students marked as PRESENT');
+                
+                processNext(0);
             }
         });
         
+        // BULK ABSENT
         document.getElementById('bulkAbsentBtn').addEventListener('click', function() {
-            if (confirm('Mark ALL students as ABSENT?')) {
-                var btns = document.querySelectorAll('.btn-absent');
-                for (var i = 0; i < btns.length; i++) {
-                    var studentId = btns[i].getAttribute('data-id');
-                    var regNo = btns[i].getAttribute('data-regno');
-                    markAttendance(btns[i], studentId, regNo, 'absent');
+            if (confirm('Mark ALL students as ABSENT for Period ' + currentPeriod + '?')) {
+                var allAbsentBtns = document.querySelectorAll('.btn-absent');
+                var successCount = 0;
+                var totalCount = allAbsentBtns.length;
+                
+                this.disabled = true;
+                document.getElementById('bulkPresentBtn').disabled = true;
+                this.textContent = '⏳ Processing...';
+                
+                function processNext(index) {
+                    if (index >= totalCount) {
+                        document.getElementById('bulkAbsentBtn').disabled = false;
+                        document.getElementById('bulkPresentBtn').disabled = false;
+                        document.getElementById('bulkAbsentBtn').textContent = '❌ All Absent';
+                        
+                        if (successCount > 0) {
+                            hasChanges = true;
+                            updateStats();
+                            alert('✅ ' + successCount + ' out of ' + totalCount + ' students marked as ABSENT');
+                        } else {
+                            alert('⚠️ No students were marked. Please try again.');
+                        }
+                        return;
+                    }
+                    
+                    var btn = allAbsentBtns[index];
+                    var studentId = btn.getAttribute('data-id');
+                    var regNo = btn.getAttribute('data-regno');
+                    
+                    var row = document.getElementById('row-' + studentId);
+                    if (row) {
+                        var presentBtn = row.querySelector('.btn-present');
+                        var absentBtn = row.querySelector('.btn-absent');
+                        var odBtn = row.querySelector('.btn-od');
+                        
+                        presentBtn.classList.remove('btn-active');
+                        presentBtn.classList.add('btn-inactive');
+                        absentBtn.classList.remove('btn-inactive');
+                        absentBtn.classList.add('btn-active');
+                        odBtn.classList.remove('btn-active');
+                        odBtn.classList.add('btn-inactive');
+                    }
+                    
+                    if (!attendanceDict[studentId]) {
+                        attendanceDict[studentId] = {};
+                    }
+                    attendanceDict[studentId][currentPeriod] = 'absent';
+                    
+                    var odKey = studentId + '_period_' + currentPeriod;
+                    if (odMarkedPerPeriod[odKey]) {
+                        delete odMarkedPerPeriod[odKey];
+                    }
+                    
+                    fetch('/update_temp_attendance', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            student_id: studentId,
+                            reg_no: regNo,
+                            period: currentPeriod,
+                            status: 'absent'
+                        })
+                    })
+                    .then(function(response) { return response.json(); })
+                    .then(function(data) {
+                        if (data.success) {
+                            successCount++;
+                        }
+                        processNext(index + 1);
+                    })
+                    .catch(function(error) {
+                        console.error('Error:', error);
+                        processNext(index + 1);
+                    });
                 }
-                alert('✅ All students marked as ABSENT');
+                
+                processNext(0);
             }
         });
         

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash, send_file
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -10,18 +10,14 @@ from pathlib import Path
 app = Flask(__name__)
 
 # ==================== PRODUCTION CONFIGURATION ====================
-# Use environment variable for secret key (Render sets this automatically)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 
-# Database configuration for production (PostgreSQL on Render) or local (SQLite)
 database_url = os.environ.get('DATABASE_URL')
 if database_url:
-    # Fix for Render's PostgreSQL URL (postgres:// -> postgresql://)
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 else:
-    # Use SQLite for local development
     instance_path = Path('instance')
     instance_path.mkdir(exist_ok=True)
     db_path = instance_path / 'attendance.db'
@@ -29,7 +25,6 @@ else:
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-# Upload folder configuration
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -37,42 +32,13 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 db = SQLAlchemy(app)
 
-# ==================== ADMIN PASSWORD MANAGEMENT ====================
-# Store admin password in database for production
+# ==================== DATABASE MODELS ====================
+
 class SystemConfig(db.Model):
     __tablename__ = 'system_config'
     id = db.Column(db.Integer, primary_key=True)
     key = db.Column(db.String(100), unique=True, nullable=False)
     value = db.Column(db.String(500), nullable=False)
-
-def get_admin_password():
-    """Get the current admin password from database"""
-    try:
-        config = SystemConfig.query.filter_by(key='admin_password').first()
-        if config:
-            return config.value
-        # Default password if not set
-        return 'admin123'
-    except:
-        return 'admin123'
-
-def set_admin_password(password):
-    """Set a new admin password in database"""
-    try:
-        config = SystemConfig.query.filter_by(key='admin_password').first()
-        if config:
-            config.value = password
-        else:
-            config = SystemConfig(key='admin_password', value=password)
-            db.session.add(config)
-        db.session.commit()
-        return True
-    except Exception as e:
-        db.session.rollback()
-        print(f"Error setting admin password: {e}")
-        return False
-
-# ==================== DATABASE MODELS ====================
 
 class Department(db.Model):
     __tablename__ = 'departments'
@@ -137,7 +103,7 @@ class StaffDepartment(db.Model):
     assigned_at = db.Column(db.DateTime, default=datetime.now)
     
     staff = db.relationship('Staff', backref='department_assignments')
-    department = db.relationship('Department', backref='assigned_staff')
+    department = db.relationship('Department', backref='assigned_staff', overlaps="dept,staff_assignments")
 
 class Attendance(db.Model):
     __tablename__ = 'attendance'
@@ -184,12 +150,11 @@ class ClassSection(db.Model):
     
     __table_args__ = (db.UniqueConstraint('year', 'section', 'department_id', name='unique_section_per_dept'),)
 
-# Create tables and initialize default admin password
+# Create tables
 with app.app_context():
     db.create_all()
     print("✅ Database tables created successfully!")
     
-    # Initialize default admin password in database
     try:
         if not SystemConfig.query.filter_by(key='admin_password').first():
             default_config = SystemConfig(key='admin_password', value='admin123')
@@ -199,15 +164,13 @@ with app.app_context():
     except Exception as e:
         print(f"Note: Admin password initialization: {e}")
     
-    # Check if subject column exists in attendance table (for SQLite)
     try:
         db.session.execute('SELECT subject FROM attendance LIMIT 1')
     except:
         try:
-            with app.app_context():
-                db.session.execute('ALTER TABLE attendance ADD COLUMN subject VARCHAR(100)')
-                db.session.commit()
-                print("✅ Added subject column to attendance")
+            db.session.execute('ALTER TABLE attendance ADD COLUMN subject VARCHAR(100)')
+            db.session.commit()
+            print("✅ Added subject column to attendance")
         except:
             pass
 
@@ -217,31 +180,92 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def calculate_student_attendance(student_id):
+    """Calculate attendance percentage based on TOTAL PERIODS
+    Returns: (total_periods, present_periods, od_periods, absent_periods, percentage)
+    """
+    
+    # Get all attendance records
     records = Attendance.query.filter_by(student_id=student_id).all()
     
-    daily_records = defaultdict(list)
-    for r in records:
-        daily_records[r.date].append(r)
+    # Get OD activities
+    od_activities = Extracurricular.query.filter(
+        Extracurricular.student_id == student_id,
+        Extracurricular.notes.like('OD_%')
+    ).all()
     
-    total_days = len(daily_records)
-    total_day_percentage = 0.0
+    # Create set of (date, period) that are OD
+    od_set = set()
+    for od in od_activities:
+        period_found = None
+        if '_period_' in od.notes:
+            try:
+                period_part = od.notes.split('_period_')[1]
+                period_found = int(period_part)
+            except:
+                pass
+        if period_found:
+            od_set.add((od.activity_date, period_found))
     
-    for date, periods in daily_records.items():
-        period_status = {p.period: p.status for p in periods}
+    # Get all unique dates
+    dates_with_records = set(r.date for r in records)
+    
+    total_present_periods = 0
+    total_od_periods = 0
+    total_periods_count = 0
+    
+    # For each date, check all 6 periods
+    for date in dates_with_records:
+        # Get records for this date
+        date_records = [r for r in records if r.date == date]
+        period_status = {r.period: r.status for r in date_records}
         
-        present_count = 0
+        # Check each period 1-6
         for period in range(1, 7):
-            if period in period_status and period_status[period] == 'present':
-                present_count += 1
-        
-        day_percentage = (present_count / 6) * 100
-        total_day_percentage += day_percentage
+            total_periods_count += 1
+            
+            # Check if it's an OD period first
+            if (date, period) in od_set:
+                total_od_periods += 1
+                total_present_periods += 1  # OD counts as present
+            # Check if present in attendance record
+            elif period in period_status and period_status[period] == 'present':
+                total_present_periods += 1
+            # Otherwise absent - no addition
     
-    overall_percentage = (total_day_percentage / total_days) if total_days > 0 else 0
+    total_absent_periods = total_periods_count - total_present_periods
     
-    return total_days, overall_percentage
+    # Calculate percentage
+    if total_periods_count > 0:
+        percentage = (total_present_periods / total_periods_count) * 100
+    else:
+        percentage = 0
+    
+    return total_periods_count, total_present_periods, total_od_periods, total_absent_periods, round(percentage, 1)
 
-# Make datetime available to all templates
+def get_admin_password():
+    try:
+        config = SystemConfig.query.filter_by(key='admin_password').first()
+        if config:
+            return config.value
+        return 'admin123'
+    except:
+        return 'admin123'
+
+def set_admin_password(password):
+    try:
+        config = SystemConfig.query.filter_by(key='admin_password').first()
+        if config:
+            config.value = password
+        else:
+            config = SystemConfig(key='admin_password', value=password)
+            db.session.add(config)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error setting admin password: {e}")
+        return False
+
 @app.context_processor
 def inject_datetime():
     return {'datetime': datetime}
@@ -290,22 +314,18 @@ def head_dashboard():
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
-    # Check if coming from head dashboard via query parameter
     dept_id_param = request.args.get('dept_id')
     
     if dept_id_param:
-        # Coming from head dashboard - set session for view-only access
         department_id = int(dept_id_param)
         session['department_id'] = department_id
         session['role'] = 'dept_admin_viewer'
         session['staff_id'] = None
         session['staff_name'] = None
     else:
-        # Check existing session
         role = session.get('role')
         department_id = session.get('department_id')
         
-        # Allow both dept_admin and dept_admin_viewer roles
         if role not in ['dept_admin', 'dept_admin_viewer']:
             return redirect(url_for('index'))
         
@@ -726,11 +746,9 @@ def staff_dashboard():
         departments = Department.query.all()
         return render_template('index.html', error='Please select a department', departments=departments)
     
-    # Get staff
     staff = db.session.get(Staff, staff_id)
     staff_subjects = staff.get_subjects_list() if staff else []
     
-    # Get students
     students = Student.query.filter_by(
         department_id=department_id,
         year=year, 
@@ -739,31 +757,28 @@ def staff_dashboard():
     
     today = datetime.now().date()
     
-    # Get existing attendance for today
     existing_attendance = Attendance.query.filter(
         Attendance.date == today,
         Attendance.period == period,
         Attendance.student_id.in_([s.id for s in students])
     ).all()
     
-    # Create a dictionary of existing attendance
     attendance_dict = {}
     for att in existing_attendance:
-        if att.student_id not in attendance_dict:
-            attendance_dict[att.student_id] = {}
-        attendance_dict[att.student_id][att.period] = att.status
+        if str(att.student_id) not in attendance_dict:
+            attendance_dict[str(att.student_id)] = {}
+        attendance_dict[str(att.student_id)][str(att.period)] = att.status
     
-    # Get temp attendance from session
     temp_attendance = session.get('temp_attendance', {})
     
-    # Merge temp attendance with existing
     for student_id_str, periods in temp_attendance.items():
-        student_id = int(student_id_str)
-        if student_id not in attendance_dict:
-            attendance_dict[student_id] = {}
+        if student_id_str == 'od_data':
+            continue
+        if student_id_str not in attendance_dict:
+            attendance_dict[student_id_str] = {}
         for period_str, status in periods.items():
             if period_str != 'od_data':
-                attendance_dict[student_id][int(period_str)] = status
+                attendance_dict[student_id_str][period_str] = status
     
     activity_types = ActivityType.query.filter_by(department_id=department_id).order_by(ActivityType.name).all()
     department = db.session.get(Department, department_id)
@@ -779,6 +794,90 @@ def staff_dashboard():
                          today=today.strftime('%Y-%m-%d'),
                          activity_types=activity_types,
                          department=department)
+
+
+@app.route('/get_staff_dashboard_data')
+def get_staff_dashboard_data():
+    if session.get('role') != 'staff':
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    
+    try:
+        year = session.get('year')
+        section = session.get('section')
+        period = session.get('period')
+        department_id = session.get('department_id')
+        staff_id = session.get('staff_id')
+        today = datetime.now().date()
+        
+        staff = db.session.get(Staff, staff_id)
+        staff_subjects = staff.get_subjects_list() if staff else []
+        department = db.session.get(Department, department_id)
+        
+        students = Student.query.filter_by(
+            department_id=department_id,
+            year=year,
+            section=section
+        ).all()
+        
+        students_list = []
+        for student in students:
+            students_list.append({
+                'id': student.id,
+                'register_number': student.register_number,
+                'name': student.name,
+                'year': student.year,
+                'section': student.section,
+                'batch': student.batch
+            })
+        
+        existing_attendance = Attendance.query.filter(
+            Attendance.date == today,
+            Attendance.period == period,
+            Attendance.student_id.in_([s.id for s in students])
+        ).all()
+        
+        attendance_dict = {}
+        for att in existing_attendance:
+            if str(att.student_id) not in attendance_dict:
+                attendance_dict[str(att.student_id)] = {}
+            attendance_dict[str(att.student_id)][str(att.period)] = att.status
+        
+        temp_attendance = session.get('temp_attendance', {})
+        
+        for student_id_str, periods in temp_attendance.items():
+            if student_id_str == 'od_data':
+                continue
+            if student_id_str not in attendance_dict:
+                attendance_dict[student_id_str] = {}
+            for period_str, status in periods.items():
+                if period_str != 'od_data':
+                    attendance_dict[student_id_str][period_str] = status
+        
+        activity_types = ActivityType.query.filter_by(department_id=department_id).order_by(ActivityType.name).all()
+        activity_types_list = []
+        for act in activity_types:
+            activity_types_list.append({
+                'id': act.id,
+                'name': act.name
+            })
+        
+        return jsonify({
+            'success': True,
+            'staff_name': staff.name if staff else '',
+            'staff_subjects': staff_subjects,
+            'department_name': department.name if department else '',
+            'department_code': department.code if department else '',
+            'year': year,
+            'section': section,
+            'period': period,
+            'today': today.strftime('%Y-%m-%d'),
+            'students': students_list,
+            'activity_types': activity_types_list,
+            'attendance_dict': attendance_dict
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @app.route('/update_temp_attendance', methods=['POST'])
@@ -816,41 +915,25 @@ def staff_mark_od():
         data = request.get_json()
         student_id = str(data.get('student_id'))
         reg_no = data.get('reg_no')
-        period = str(data.get('period'))  # Current period (1-6)
+        period = str(data.get('period'))
         date_str = data.get('date')
         activity_type_id = data.get('activity_type_id')
         activity_name = data.get('activity_name')
         
-        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-        
-        # IMPORTANT: Check if OD already exists for this student, date, and SPECIFIC period
-        existing_od_db = Extracurricular.query.filter(
-            Extracurricular.student_id == int(student_id),
-            Extracurricular.activity_date == selected_date,
-            Extracurricular.notes.like(f'%_period_{period}')
-        ).first()
-        
-        if existing_od_db:
-            return jsonify({'success': False, 'error': f'OD already exists for this student on Period {period}! Cannot mark duplicate in same period.'})
-        
-        # Check temp attendance for duplicate in same period
         temp_attendance = session.get('temp_attendance', {})
         
         if student_id in temp_attendance and period in temp_attendance[student_id]:
             if temp_attendance[student_id][period] == 'od':
-                return jsonify({'success': False, 'error': f'OD already marked for this student on Period {period} in current session!'})
+                return jsonify({'success': False, 'error': f'OD already marked for Period {period}!'})
         
         if student_id not in temp_attendance:
             temp_attendance[student_id] = {}
         
-        # Store the OD status for this specific period
         temp_attendance[student_id][period] = 'od'
         
-        # Store OD details with period information
         if 'od_data' not in temp_attendance:
             temp_attendance['od_data'] = {}
         
-        # Use unique key combining student_id and period
         od_key = f"{student_id}_{period}"
         temp_attendance['od_data'][od_key] = {
             'student_id': student_id,
@@ -864,9 +947,8 @@ def staff_mark_od():
         session['temp_attendance'] = temp_attendance
         session.modified = True
         
-        return jsonify({'success': True, 'message': f'OD marked for Period {period}'})
+        return jsonify({'success': True, 'message': f'OD marked for period {period}'})
     except Exception as e:
-        print(f"Error in staff_mark_od: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
 
@@ -885,7 +967,6 @@ def save_attendance():
         od_saved_count = 0
         od_skipped_count = 0
         
-        # Get OD data
         od_data = temp_attendance.get('od_data', {})
         
         for student_id_str, periods in temp_attendance.items():
@@ -901,39 +982,32 @@ def save_attendance():
                 period_val = int(period_str)
                 final_status = status
                 
-                # Check if this is an OD for this specific student and period
                 od_key = f"{student_id_str}_{period_str}"
                 if status == 'od' and od_key in od_data:
                     student_od = od_data[od_key]
-                    try:
-                        # Check if OD already exists for this student, date, and SPECIFIC period
-                        existing_od = Extracurricular.query.filter(
-                            Extracurricular.student_id == student_id,
-                            Extracurricular.activity_date == datetime.strptime(student_od.get('date'), '%Y-%m-%d').date(),
-                            Extracurricular.notes.like(f'%_period_{period_val}')
-                        ).first()
+                    
+                    existing_od_check = Extracurricular.query.filter(
+                        Extracurricular.student_id == student_id,
+                        Extracurricular.activity_date == today,
+                        Extracurricular.notes.like(f'%_period_{period_val}')
+                    ).first()
+                    
+                    if existing_od_check:
+                        od_skipped_count += 1
+                    else:
+                        od_notes = f"OD_{student_od.get('activity_name')}_period_{period_val}"
                         
-                        if existing_od:
-                            print(f"OD already exists for student {student_id}, period {period_val}, skipping...")
-                            od_skipped_count += 1
-                        else:
-                            od_notes = f"OD_{student_od.get('activity_name')}_period_{period_val}"
-                            
-                            od_activity = Extracurricular(
-                                student_id=student_id,
-                                activity_type_id=int(student_od.get('activity_type_id')),
-                                activity_date=datetime.strptime(student_od.get('date'), '%Y-%m-%d').date(),
-                                notes=od_notes
-                            )
-                            db.session.add(od_activity)
-                            od_saved_count += 1
-                            print(f"OD saved: Student {student_id}, Period {period_val}")
-                        
-                        final_status = 'present'
-                    except Exception as e:
-                        print(f"Error saving OD: {e}")
+                        od_activity = Extracurricular(
+                            student_id=student_id,
+                            activity_type_id=int(student_od.get('activity_type_id')),
+                            activity_date=today,
+                            notes=od_notes
+                        )
+                        db.session.add(od_activity)
+                        od_saved_count += 1
+                    
+                    final_status = 'present'
                 
-                # Save or update attendance
                 existing = Attendance.query.filter_by(
                     student_id=student_id,
                     date=today,
@@ -963,7 +1037,7 @@ def save_attendance():
         session.pop('temp_attendance', None)
         
         if od_skipped_count > 0:
-            flash(f'✅ Attendance saved! {saved_count} records, {od_saved_count} new OD activities. Skipped {od_skipped_count} duplicate OD(s).', 'success')
+            flash(f'✅ Attendance saved! {saved_count} records, {od_saved_count} new OD activities. Skipped {od_skipped_count} duplicate(s).', 'success')
         else:
             flash(f'✅ Attendance saved! {saved_count} records, {od_saved_count} OD activities.', 'success')
         
@@ -998,28 +1072,48 @@ def student_dashboard():
         Attendance.period
     ).all()
     
+    # Get OD activities
     od_activities = Extracurricular.query.filter(
         Extracurricular.student_id == student_id,
         Extracurricular.notes.like('OD_%')
     ).all()
     
+    # Create OD info dictionary with (date, period) as key
     od_info = {}
     for od in od_activities:
-        od_info[od.activity_date] = {
-            'activity_name': od.notes.replace('OD_', ''),
-            'activity_type': od.activity_type.name if od.activity_type else 'General'
-        }
+        activity_name = od.notes.replace('OD_', '')
+        period_found = None
+        
+        if '_period_' in od.notes:
+            try:
+                period_part = od.notes.split('_period_')[1]
+                period_found = int(period_part)
+                activity_name = activity_name.split('_period_')[0]
+            except:
+                pass
+        
+        if period_found:
+            key = f"{od.activity_date}_{period_found}"
+            od_info[key] = {
+                'activity_name': activity_name,
+                'activity_type': od.activity_type.name if od.activity_type else 'General'
+            }
     
-    from collections import defaultdict
+    # Build daily attendance
     daily_attendance = defaultdict(dict)
     
     for record in records:
         staff = db.session.get(Staff, record.marked_by)
         record.marked_by_name = staff.name if staff else 'System'
-        record.is_od = record.date in od_info
-        record.od_activity_name = od_info[record.date]['activity_name'] if record.date in od_info else ''
+        
+        # Check if THIS SPECIFIC period on THIS DATE has OD
+        od_key = f"{record.date}_{record.period}"
+        record.is_od = od_key in od_info
+        record.od_activity_name = od_info[od_key]['activity_name'] if record.is_od else ''
+        
         daily_attendance[record.date][record.period] = record
     
+    # Fill missing periods with default values
     for date in list(daily_attendance.keys()):
         for period in range(1, 7):
             if period not in daily_attendance[date]:
@@ -1031,11 +1125,9 @@ def student_dashboard():
                 })
                 daily_attendance[date][period] = virtual_record
     
-    total_periods = len(records)
-    present_periods = sum(1 for r in records if r.status == 'present')
-    absent_periods = total_periods - present_periods
-    
-    total_days, percentage = calculate_student_attendance(student_id)
+    # Calculate statistics using updated function with OD count
+    total_periods, present_periods, od_periods, absent_periods, percentage = calculate_student_attendance(student_id)
+    total_days = len(daily_attendance)
     
     return render_template('student_dashboard.html',
                          name=name,
@@ -1046,7 +1138,8 @@ def student_dashboard():
                          total_days=total_days,
                          present=present_periods,
                          absent=absent_periods,
-                         percentage=round(percentage, 1))
+                         od=od_periods,
+                         percentage=percentage)
 
 # ==================== ADMIN CLASS VIEW ROUTES ====================
 
@@ -1064,26 +1157,26 @@ def view_class(year, section):
         section=section
     ).all()
     
+    # Get EC activities for all students
+    student_ids = [s.id for s in students]
+    ec_activities = Extracurricular.query.filter(
+        Extracurricular.student_id.in_(student_ids),
+        ~Extracurricular.notes.like('OD_%')
+    ).all()
+    
+    # Group EC activities by student
+    ec_by_student = defaultdict(list)
+    for activity in ec_activities:
+        ec_by_student[activity.student_id].append({
+            'id': activity.id,
+            'name': activity.activity_type.name if activity.activity_type else 'Unknown',
+            'notes': activity.notes
+        })
+    
     summary = []
     for student in students:
-        records = Attendance.query.filter_by(student_id=student.id).all()
-        
-        total_periods = len(records)
-        present_periods = sum(1 for r in records if r.status == 'present')
-        absent_periods = total_periods - present_periods
-        
-        total_days, percentage = calculate_student_attendance(student.id)
-        
-        all_activities = Extracurricular.query.filter_by(student_id=student.id).all()
-        ec_activity_list = []
-        for act in all_activities:
-            if act.notes and act.notes.startswith('OD_'):
-                continue
-            ec_activity_list.append({
-                'id': act.id, 
-                'name': act.activity_type.name, 
-                'notes': act.notes
-            })
+        total_periods, present_periods, od_periods, absent_periods, percentage = calculate_student_attendance(student.id)
+        total_days = len(set(r.date for r in Attendance.query.filter_by(student_id=student.id).all()))
         
         summary.append({
             'id': student.id,
@@ -1093,15 +1186,46 @@ def view_class(year, section):
             'total_days': total_days,
             'total_periods': total_periods,
             'present_periods': present_periods,
+            'od_periods': od_periods,
             'absent_periods': absent_periods,
-            'percentage': round(percentage, 1),
-            'ec_activities': ec_activity_list
+            'percentage': percentage,
+            'ec_activities': ec_by_student.get(student.id, [])
         })
     
     return render_template('class_view.html',
                          year=year,
                          section=section,
                          students=summary)
+
+
+@app.route('/print_attendance/<year>/<section>')
+def print_attendance(year, section):
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return redirect(url_for('index'))
+    
+    department_id = session.get('department_id')
+    
+    students = Student.query.filter_by(
+        department_id=department_id,
+        year=year, 
+        section=section
+    ).all()
+    
+    summary = []
+    for student in students:
+        summary.append({
+            'name': student.name,
+            'reg_no': student.register_number,
+            'batch': student.batch
+        })
+    
+    return render_template('print_attendance.html',
+                         year=year,
+                         section=section,
+                         students=summary,
+                         print_date=datetime.now().strftime('%d-%m-%Y %H:%M'))
+
 
 @app.route('/student_attendance_details/<int:student_id>/<year>/<section>')
 def student_attendance_details(student_id, year, section):
@@ -1123,13 +1247,26 @@ def student_attendance_details(student_id, year, section):
         Extracurricular.notes.like('OD_%')
     ).all()
     
-    # Create OD info dictionary
+    # Create OD info dictionary with (date, period) as key
     od_info = {}
     for od in od_activities:
-        od_info[od.activity_date] = {
-            'activity_name': od.notes.replace('OD_', ''),
-            'activity_type': od.activity_type.name if od.activity_type else 'General'
-        }
+        activity_name = od.notes.replace('OD_', '')
+        period_found = None
+        
+        if '_period_' in od.notes:
+            try:
+                period_part = od.notes.split('_period_')[1]
+                period_found = int(period_part)
+                activity_name = activity_name.split('_period_')[0]
+            except:
+                pass
+        
+        if period_found:
+            key = f"{od.activity_date}_{period_found}"
+            od_info[key] = {
+                'activity_name': activity_name,
+                'activity_type': od.activity_type.name if od.activity_type else 'General'
+            }
     
     # Build daily attendance
     from collections import defaultdict
@@ -1138,15 +1275,18 @@ def student_attendance_details(student_id, year, section):
     for record in records:
         staff = db.session.get(Staff, record.marked_by)
         record.marked_by_name = staff.name if staff else 'System'
-        record.is_od = record.date in od_info
-        record.od_activity_name = od_info[record.date]['activity_name'] if record.date in od_info else ''
+        
+        # Check if THIS SPECIFIC period on THIS DATE has OD activity
+        od_key = f"{record.date}_{record.period}"
+        record.is_od = od_key in od_info
+        record.od_activity_name = od_info[od_key]['activity_name'] if record.is_od else ''
+        
         daily_attendance[record.date][record.period] = record
     
-    # Fill missing periods
+    # Fill missing periods with default values
     for date in list(daily_attendance.keys()):
         for period in range(1, 7):
             if period not in daily_attendance[date]:
-                # Create virtual record for missing periods
                 virtual_record = type('obj', (object,), {
                     'status': 'absent',
                     'marked_by_name': 'Not Marked',
@@ -1155,18 +1295,9 @@ def student_attendance_details(student_id, year, section):
                 })
                 daily_attendance[date][period] = virtual_record
     
-    # Calculate statistics
-    total_periods = len(records)
-    present_periods = sum(1 for r in records if r.status == 'present')
-    absent_periods = total_periods - present_periods
-    
+    # Calculate statistics using updated function with OD count
+    total_periods, present_periods, od_periods, absent_periods, percentage = calculate_student_attendance(student_id)
     total_days = len(daily_attendance)
-    
-    # Calculate percentage
-    if total_periods > 0:
-        percentage = (present_periods / total_periods) * 100
-    else:
-        percentage = 0
     
     return render_template('student_attendance_details.html',
                          student=student,
@@ -1176,7 +1307,9 @@ def student_attendance_details(student_id, year, section):
                          total_days=total_days,
                          present=present_periods,
                          absent=absent_periods,
-                         percentage=round(percentage, 1))
+                         od=od_periods,
+                         percentage=percentage)
+
 
 @app.route('/manage_attendance/<int:student_id>/<year>/<section>')
 def manage_attendance(student_id, year, section):
@@ -1191,7 +1324,6 @@ def manage_attendance(student_id, year, section):
         Attendance.period
     ).all()
     
-    from collections import defaultdict
     attendance_by_date = defaultdict(list)
     for record in records:
         staff = db.session.get(Staff, record.marked_by)
@@ -1203,6 +1335,7 @@ def manage_attendance(student_id, year, section):
                          year=year,
                          section=section,
                          attendance_by_date=dict(attendance_by_date))
+
 
 @app.route('/edit_attendance/<int:attendance_id>', methods=['GET', 'POST'])
 def edit_attendance(attendance_id):
@@ -1231,6 +1364,7 @@ def edit_attendance(attendance_id):
                          student=student,
                          staff=staff)
 
+
 @app.route('/delete_attendance/<int:attendance_id>')
 def delete_attendance(attendance_id):
     role = session.get('role')
@@ -1248,6 +1382,7 @@ def delete_attendance(attendance_id):
     session['attendance_message'] = f'✅ Attendance record deleted for {student.name} on {attendance.date.strftime("%d-%m-%Y")} Period {attendance.period}'
     
     return redirect(url_for('manage_attendance', student_id=student.id, year=year, section=section))
+
 
 @app.route('/add_custom_attendance/<int:student_id>/<year>/<section>', methods=['GET', 'POST'])
 def add_custom_attendance(student_id, year, section):
@@ -1302,6 +1437,7 @@ def add_custom_attendance(student_id, year, section):
                          section=section,
                          staff=staff)
 
+
 @app.route('/add_previous_attendance/<int:student_id>', methods=['GET', 'POST'])
 def add_previous_attendance(student_id):
     role = session.get('role')
@@ -1352,6 +1488,7 @@ def add_previous_attendance(student_id):
     return render_template('add_previous_attendance.html',
                          student=student,
                          staff=staff)
+
 
 @app.route('/add_new_date_attendance/<int:student_id>/<year>/<section>', methods=['GET', 'POST'])
 def add_new_date_attendance(student_id, year, section):
@@ -1406,67 +1543,6 @@ def add_new_date_attendance(student_id, year, section):
                          section=section,
                          staff=staff)
 
-@app.route('/print_attendance/<year>/<section>')
-def print_attendance(year, section):
-    role = session.get('role')
-    if role not in ['dept_admin', 'dept_admin_viewer']:
-        return redirect(url_for('index'))
-    
-    department_id = session.get('department_id')
-    
-    students = Student.query.filter_by(
-        department_id=department_id,
-        year=year, 
-        section=section
-    ).all()
-    
-    summary = []
-    for student in students:
-        summary.append({
-            'name': student.name,
-            'reg_no': student.register_number,
-            'batch': student.batch
-        })
-    
-    return render_template('print_attendance.html',
-                         year=year,
-                         section=section,
-                         students=summary,
-                         print_date=datetime.now().strftime('%d-%m-%Y %H:%M'))
-
-@app.route('/change_password', methods=['GET', 'POST'])
-def change_password():
-    role = session.get('role')
-    if role not in ['dept_admin', 'dept_admin_viewer']:
-        return redirect(url_for('index'))
-    
-    if request.method == 'POST':
-        current_password = request.form.get('current_password')
-        new_password = request.form.get('new_password')
-        confirm_password = request.form.get('confirm_password')
-        
-        admin = db.session.get(Staff, session.get('staff_id'))
-        
-        if not admin or not admin.check_password(current_password):
-            session['password_message'] = '❌ Current password is incorrect!'
-            return redirect(url_for('change_password'))
-        
-        if new_password != confirm_password:
-            session['password_message'] = '❌ New passwords do not match!'
-            return redirect(url_for('change_password'))
-        
-        if len(new_password) < 6:
-            session['password_message'] = '❌ Password must be at least 6 characters!'
-            return redirect(url_for('change_password'))
-        
-        admin.set_password(new_password)
-        db.session.commit()
-        session.clear()
-        flash('✅ Password changed successfully! Please login with your new password.', 'success')
-        
-        return redirect(url_for('index'))
-    
-    return render_template('change_password.html')
 
 @app.route('/monthly_attendance/<year>/<section>')
 def monthly_attendance(year, section):
@@ -1501,44 +1577,31 @@ def monthly_attendance(year, section):
                 'name': month_name,
                 'key': month_key,
                 'dates': [],
-                'student_count': len(students),
-                'total_day_percentages': 0.0,
-                'days_with_data': 0
+                'student_count': len(students)
             }
         
         months_data[month_key]['dates'].append(date)
     
     for month_key, data in months_data.items():
-        total_day_percentages = 0.0
-        days_with_data = 0
+        total_present_sum = 0
+        total_possible_sum = 0
         
-        for date in data['dates']:
-            date_records = attendance_by_date.get(date, [])
+        for student in students:
+            student_records = [r for r in all_attendance if r.student_id == student.id]
             
-            day_percentages = []
-            for student in students:
-                student_records = [r for r in date_records if r.student_id == student.id]
-                period_status = {r.period: r.status for r in student_records}
-                
-                present_count = 0
+            for date in data['dates']:
                 for period in range(1, 7):
-                    if period in period_status and period_status[period] == 'present':
-                        present_count += 1
-                
-                day_percentage = (present_count / 6) * 100
-                day_percentages.append(day_percentage)
-            
-            if day_percentages:
-                avg_day_percentage = sum(day_percentages) / len(day_percentages)
-                total_day_percentages += avg_day_percentage
-                days_with_data += 1
+                    total_possible_sum += 1
+                    record_exists = any(r.date == date and r.period == period and r.status == 'present' for r in student_records)
+                    if record_exists:
+                        total_present_sum += 1
         
-        if days_with_data > 0:
-            data['attendance_percentage'] = round(total_day_percentages / days_with_data, 1)
+        if total_possible_sum > 0:
+            data['attendance_percentage'] = round((total_present_sum / total_possible_sum) * 100, 1)
         else:
             data['attendance_percentage'] = 0
         
-        data['total_days'] = days_with_data
+        data['total_days'] = len(data['dates'])
         data['total_students'] = len(students)
     
     months = sorted(months_data.keys(), reverse=True)
@@ -1549,6 +1612,7 @@ def monthly_attendance(year, section):
                          months=months,
                          months_data=months_data,
                          students=students)
+
 
 @app.route('/monthly_attendance_detail/<year>/<section>/<month_key>')
 def monthly_attendance_detail(year, section, month_key):
@@ -1578,7 +1642,6 @@ def monthly_attendance_detail(year, section, month_key):
         Attendance.date < end_date
     ).order_by(Attendance.date, Attendance.period).all()
     
-    from collections import defaultdict
     daily_records = defaultdict(list)
     for record in records:
         daily_records[record.date].append(record)
@@ -1624,6 +1687,7 @@ def monthly_attendance_detail(year, section, month_key):
                          student_attendance=student_attendance,
                          students=students)
 
+
 @app.route('/ec_types', methods=['GET', 'POST'])
 def ec_types():
     role = session.get('role')
@@ -1649,6 +1713,7 @@ def ec_types():
     activities = ActivityType.query.filter_by(department_id=department_id).order_by(ActivityType.name).all()
     return render_template('ec_types.html', activities=activities)
 
+
 @app.route('/delete_activity_type/<int:activity_id>')
 def delete_activity_type(activity_id):
     role = session.get('role')
@@ -1661,6 +1726,7 @@ def delete_activity_type(activity_id):
     db.session.commit()
     session['ec_message'] = f'✅ Activity type "{name}" deleted successfully!'
     return redirect(url_for('ec_types'))
+
 
 @app.route('/all_ec_activities')
 def all_ec_activities():
@@ -1707,6 +1773,7 @@ def all_ec_activities():
                          grouped_data=grouped_data,
                          activity_types=activity_types)
 
+
 @app.route('/od_by_date', methods=['GET', 'POST'])
 def od_by_date():
     role = session.get('role')
@@ -1723,13 +1790,11 @@ def od_by_date():
         if date_str:
             selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
             
-            # Get all OD activities for the selected date
             od_activities = Extracurricular.query.filter(
                 Extracurricular.notes.like('OD_%'),
                 Extracurricular.activity_date == selected_date
             ).join(Student).filter(Student.department_id == department_id).all()
             
-            # Group by student
             student_od_map = {}
             for activity in od_activities:
                 if activity.student_id not in student_od_map:
@@ -1741,7 +1806,6 @@ def od_by_date():
                 if student:
                     od_details = []
                     for act in activities:
-                        # Extract period from the notes (format: OD_ActivityName_period_X)
                         period_found = 'Unknown'
                         activity_name = act.notes.replace('OD_', '')
                         
@@ -1759,7 +1823,6 @@ def od_by_date():
                             'period': period_found
                         })
                     
-                    # Sort by period number
                     od_details.sort(key=lambda x: x['period'] if isinstance(x['period'], int) else 999)
                     
                     students_with_od.append({
@@ -1775,6 +1838,7 @@ def od_by_date():
     return render_template('od_by_date.html', 
                          students=students_with_od, 
                          selected_date=selected_date)
+
 
 @app.route('/ec_activity/<int:student_id>/<year>/<section>', methods=['GET', 'POST'])
 def ec_activity(student_id, year, section):
@@ -1806,13 +1870,6 @@ def ec_activity(student_id, year, section):
                 sport_name = request.form.get('sport_name')
                 if sport_name:
                     notes = f'Sport : {sport_name}'
-                    existing_sport = Extracurricular.query.filter(
-                        Extracurricular.student_id == student.id,
-                        Extracurricular.notes == notes
-                    ).first()
-                    if existing_sport:
-                        session['ec_error'] = f'{student.name} already has "{sport_name}" sport activity!'
-                        return redirect(url_for('ec_activity', student_id=student.id, year=year, section=section))
                 else:
                     notes = 'Sports'
             else:
@@ -1838,6 +1895,7 @@ def ec_activity(student_id, year, section):
                          section=section,
                          activity_types=activity_types)
 
+
 @app.route('/delete_student_ec', methods=['POST'])
 def delete_student_ec():
     role = session.get('role')
@@ -1862,6 +1920,7 @@ def delete_student_ec():
         return jsonify({'success': True, 'message': 'Activity deleted successfully'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+
 
 @app.route('/add_section', methods=['POST'])
 def add_section():
@@ -1893,6 +1952,7 @@ def add_section():
     
     return jsonify({'success': True, 'message': f'Section {section} added for {year}'})
 
+
 @app.route('/delete_section', methods=['POST'])
 def delete_section():
     role = session.get('role')
@@ -1919,6 +1979,7 @@ def delete_section():
     db.session.commit()
     
     return jsonify({'success': True, 'message': f'Section {section.section} deleted for {section.year}'})
+
 
 @app.route('/add_student', methods=['POST'])
 def add_student():
@@ -1960,6 +2021,7 @@ def add_student():
         session['upload_message'] = f'❌ Error: {str(e)}'
     
     return redirect(url_for('admin_dashboard'))
+
 
 @app.route('/upload_students', methods=['POST'])
 def upload_students():
@@ -2029,6 +2091,7 @@ def upload_students():
     
     return redirect(url_for('admin_dashboard'))
 
+
 @app.route('/delete_student/<int:student_id>')
 def delete_student(student_id):
     role = session.get('role')
@@ -2046,108 +2109,48 @@ def delete_student(student_id):
     
     return redirect(url_for('view_class', year=year, section=section))
 
+
+@app.route('/change_password', methods=['GET', 'POST'])
+def change_password():
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        admin = db.session.get(Staff, session.get('staff_id'))
+        
+        if not admin or not admin.check_password(current_password):
+            session['password_message'] = '❌ Current password is incorrect!'
+            return redirect(url_for('change_password'))
+        
+        if new_password != confirm_password:
+            session['password_message'] = '❌ New passwords do not match!'
+            return redirect(url_for('change_password'))
+        
+        if len(new_password) < 6:
+            session['password_message'] = '❌ Password must be at least 6 characters!'
+            return redirect(url_for('change_password'))
+        
+        admin.set_password(new_password)
+        db.session.commit()
+        session.clear()
+        flash('✅ Password changed successfully! Please login with your new password.', 'success')
+        
+        return redirect(url_for('index'))
+    
+    return render_template('change_password.html')
+
+
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('index'))
 
-@app.route('/get_staff_dashboard_data')
-def get_staff_dashboard_data():
-    if session.get('role') != 'staff':
-        return jsonify({'success': False, 'error': 'Unauthorized'})
-    
-    try:
-        year = session.get('year')
-        section = session.get('section')
-        period = session.get('period')
-        department_id = session.get('department_id')
-        staff_id = session.get('staff_id')
-        today = datetime.now().date()
-        
-        # Get staff
-        staff = db.session.get(Staff, staff_id)
-        staff_subjects = staff.get_subjects_list() if staff else []
-        
-        # Get department
-        department = db.session.get(Department, department_id)
-        
-        # Get students
-        students = Student.query.filter_by(
-            department_id=department_id,
-            year=year,
-            section=section
-        ).all()
-        
-        # Convert students to dict
-        students_list = []
-        for student in students:
-            students_list.append({
-                'id': student.id,
-                'register_number': student.register_number,
-                'name': student.name,
-                'year': student.year,
-                'section': student.section,
-                'batch': student.batch
-            })
-        
-        # Get existing attendance for TODAY
-        existing_attendance = Attendance.query.filter(
-            Attendance.date == today,
-            Attendance.period == period,
-            Attendance.student_id.in_([s.id for s in students])
-        ).all()
-        
-        # Build attendance dict
-        attendance_dict = {}
-        for att in existing_attendance:
-            if str(att.student_id) not in attendance_dict:
-                attendance_dict[str(att.student_id)] = {}
-            attendance_dict[str(att.student_id)][str(att.period)] = att.status
-        
-        # Get temp attendance from session
-        temp_attendance = session.get('temp_attendance', {})
-        
-        # Merge temp attendance (this overrides existing)
-        for student_id_str, periods in temp_attendance.items():
-            if student_id_str == 'od_data':
-                continue
-            if student_id_str not in attendance_dict:
-                attendance_dict[student_id_str] = {}
-            for period_str, status in periods.items():
-                if period_str != 'od_data':
-                    attendance_dict[student_id_str][period_str] = status
-        
-        # Get activity types
-        activity_types = ActivityType.query.filter_by(department_id=department_id).order_by(ActivityType.name).all()
-        activity_types_list = []
-        for act in activity_types:
-            activity_types_list.append({
-                'id': act.id,
-                'name': act.name
-            })
-        
-        return jsonify({
-            'success': True,
-            'staff_name': staff.name if staff else '',
-            'staff_subjects': staff_subjects,
-            'department_name': department.name if department else '',
-            'department_code': department.code if department else '',
-            'year': year,
-            'section': section,
-            'period': period,
-            'today': today.strftime('%Y-%m-%d'),
-            'students': students_list,
-            'activity_types': activity_types_list,
-            'attendance_dict': attendance_dict
-        })
-        
-    except Exception as e:
-        print(f"Error in get_staff_dashboard_data: {e}")
-        return jsonify({'success': False, 'error': str(e)})
-
-# ==================== MAIN ENTRY POINT ====================
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    # Use debug=False for production
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     app.run(host='0.0.0.0', port=port, debug=debug_mode)

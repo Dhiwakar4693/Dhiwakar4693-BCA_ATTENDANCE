@@ -63,7 +63,7 @@
 
         .stats-container {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 15px;
             margin-bottom: 20px;
         }
@@ -87,6 +87,7 @@
 
         .present { color: #28a745; }
         .absent { color: #dc3545; }
+        .od { color: #17a2b8; }
         .total { color: #667eea; }
 
         .legend {
@@ -294,6 +295,10 @@
                 <p>Periods Present</p>
             </div>
             <div class="stat-card">
+                <h3 class="od">{{ od }}</h3>
+                <p>On Duty (OD)</p>
+            </div>
+            <div class="stat-card">
                 <h3 class="absent">{{ absent }}</h3>
                 <p>Periods Absent</p>
             </div>
@@ -310,7 +315,7 @@
             </div>
             <div class="legend-item">
                 <div class="legend-color od"></div>
-                <span>On Duty (OD)</span>
+                <span>On Duty (OD) - Shows EC Activity</span>
             </div>
             <div class="legend-item">
                 <div class="legend-color absent"></div>
