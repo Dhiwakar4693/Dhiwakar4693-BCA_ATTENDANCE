@@ -1,69 +1,13 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-
-# Virtual Environment
-venv/
-env/
-ENV/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Uploads
-uploads/
-
-# Environment variables
-.env
-.env.local
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log# Python
-__pycache__/
-*.py[cod]
-*.so
-.Python
-
-# Virtual Environment
-venv/
-env/
-ENV/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-instance/
-
-# Uploaded files
-uploads/*.xlsx
-uploads/*.csv
-uploads/*.xls
-
-# Environment variables
-.env
-.env.local
-
-# IDE
-.vscode/
-.idea/
-*.swp
-
-# OS
-.DS_Store
-Thumbs.db
+# Create .gitignore file
+echo "__pycache__/" > .gitignore
+echo "*.pyc" >> .gitignore
+echo "*.db" >> .gitignore
+echo "*.sqlite" >> .gitignore
+echo "instance/" >> .gitignore
+echo "uploads/*.xlsx" >> .gitignore
+echo "uploads/*.csv" >> .gitignore
+echo ".env" >> .gitignore
+echo "venv/" >> .gitignore
+echo "env/" >> .gitignore
+echo ".DS_Store" >> .gitignore
+echo "Thumbs.db" >> .gitignore
