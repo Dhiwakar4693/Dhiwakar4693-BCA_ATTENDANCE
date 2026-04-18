@@ -2397,6 +2397,85 @@ def get_student_full_details(student_id):
         'daily_attendance': daily_attendance
     })
 
+@app.route('/clear_all_attendance', methods=['POST'])
+def clear_all_attendance():
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    
+    try:
+        attendance_count = Attendance.query.count()
+        deleted = Attendance.query.delete()
+        db.session.commit()
+        
+        return jsonify({
+            'success': True,
+            'deleted_count': deleted,
+            'message': f'Successfully deleted {deleted} attendance record(s). Student details preserved.'
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
+# Promote Students Route
+@app.route('/promote_students', methods=['POST'])
+def promote_students():
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    
+    department_id = session.get('department_id')
+    
+    try:
+        # Get counts before promotion
+        first_year_count = Student.query.filter_by(department_id=department_id, year='1st Year').count()
+        second_year_count = Student.query.filter_by(department_id=department_id, year='2nd Year').count()
+        third_year_count = Student.query.filter_by(department_id=department_id, year='3rd Year').count()
+        
+        # Step 1: Delete 3rd Year students (they graduate)
+        deleted_third_year = Student.query.filter_by(department_id=department_id, year='3rd Year').delete()
+        
+        # Step 2: Move 2nd Year to 3rd Year
+        second_year_students = Student.query.filter_by(department_id=department_id, year='2nd Year').all()
+        for student in second_year_students:
+            student.year = '3rd Year'
+        
+        # Step 3: Move 1st Year to 2nd Year
+        first_year_students = Student.query.filter_by(department_id=department_id, year='1st Year').all()
+        for student in first_year_students:
+            student.year = '2nd Year'
+        
+        db.session.commit()
+        
+        # Get counts after promotion
+        new_first_year_count = Student.query.filter_by(department_id=department_id, year='1st Year').count()
+        new_second_year_count = Student.query.filter_by(department_id=department_id, year='2nd Year').count()
+        new_third_year_count = Student.query.filter_by(department_id=department_id, year='3rd Year').count()
+        
+        return jsonify({
+            'success': True,
+            'message': f'✅ Promotion Complete!\n\n'
+                      f'📊 Summary:\n'
+                      f'• 3rd Year: {third_year_count} students graduated and removed\n'
+                      f'• 2nd Year → 3rd Year: {second_year_count} students promoted\n'
+                      f'• 1st Year → 2nd Year: {first_year_count} students promoted\n\n'
+                      f'📋 Current Status:\n'
+                      f'• 1st Year: {new_first_year_count} students\n'
+                      f'• 2nd Year: {new_second_year_count} students\n'
+                      f'• 3rd Year: {new_third_year_count} students',
+            'details': {
+                'deleted_third_year': deleted_third_year,
+                'promoted_to_third': second_year_count,
+                'promoted_to_second': first_year_count,
+                'new_first_year': new_first_year_count,
+                'new_second_year': new_second_year_count,
+                'new_third_year': new_third_year_count
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/logout')
 def logout():
     session.clear()
