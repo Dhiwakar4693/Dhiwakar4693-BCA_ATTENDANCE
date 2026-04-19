@@ -6,24 +6,38 @@ from collections import defaultdict
 import pandas as pd
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 
 # ==================== PRODUCTION CONFIGURATION ====================
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24).hex())
 
+# Database configuration - Supports PostgreSQL (production) and SQLite (development)
 database_url = os.environ.get('DATABASE_URL')
+
 if database_url:
+    # Production: Use PostgreSQL
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+    print("✅ Using PostgreSQL database")
 else:
+    # Development: Use SQLite
     instance_path = Path('instance')
     instance_path.mkdir(exist_ok=True)
     db_path = instance_path / 'attendance.db'
     app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path.absolute()}'
+    print("✅ Using SQLite database (development)")
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+    'pool_pre_ping': True,
+    'pool_recycle': 300,
+}
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'xlsx', 'xls', 'csv'}
@@ -71,6 +85,11 @@ class Student(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
     
     attendances = db.relationship('Attendance', backref='student', lazy=True, cascade='all, delete-orphan')
+    
+    __table_args__ = (
+        db.Index('idx_student_department_year_section', 'department_id', 'year', 'section'),
+        db.Index('idx_student_register_number', 'register_number'),
+    )
 
 class Staff(db.Model):
     __tablename__ = 'staff'
@@ -122,7 +141,11 @@ class Attendance(db.Model):
     marked_by = db.Column(db.Integer, db.ForeignKey('staff.id'))
     marked_at = db.Column(db.DateTime, default=datetime.now)
     
-    __table_args__ = (db.UniqueConstraint('student_id', 'date', 'period', name='unique_attendance'),)
+    __table_args__ = (
+        db.UniqueConstraint('student_id', 'date', 'period', name='unique_attendance'),
+        db.Index('idx_attendance_student_date', 'student_id', 'date'),
+        db.Index('idx_attendance_date_period', 'date', 'period'),
+    )
 
 class ActivityType(db.Model):
     __tablename__ = 'activity_types'
@@ -169,78 +192,6 @@ with app.app_context():
             print("✅ Default admin password initialized (admin123)")
     except Exception as e:
         print(f"Note: Admin password initialization: {e}")
-    
-    try:
-        db.session.execute('SELECT subject FROM attendance LIMIT 1')
-    except:
-        try:
-            db.session.execute('ALTER TABLE attendance ADD COLUMN subject VARCHAR(100)')
-            db.session.commit()
-            print("✅ Added subject column to attendance")
-        except:
-            pass
-    
-    # Add new columns to students table
-    try:
-        result = db.session.execute(db.text("PRAGMA table_info(students)"))
-        existing_columns = [row[1] for row in result.fetchall()]
-        
-        if 'gender' not in existing_columns:
-            db.session.execute(db.text('ALTER TABLE students ADD COLUMN gender VARCHAR(1) DEFAULT "M"'))
-            print("✅ Added gender column")
-        
-        if 'dob' not in existing_columns:
-            db.session.execute(db.text('ALTER TABLE students ADD COLUMN dob VARCHAR(50)'))
-            print("✅ Added dob column")
-        
-        if 'umis' not in existing_columns:
-            db.session.execute(db.text('ALTER TABLE students ADD COLUMN umis VARCHAR(50)'))
-            print("✅ Added umis column")
-        
-        if 'mobile_student' not in existing_columns:
-            db.session.execute(db.text('ALTER TABLE students ADD COLUMN mobile_student VARCHAR(15)'))
-            print("✅ Added mobile_student column")
-        
-        if 'mobile_parent' not in existing_columns:
-            db.session.execute(db.text('ALTER TABLE students ADD COLUMN mobile_parent VARCHAR(15)'))
-            print("✅ Added mobile_parent column")
-        
-        if 'parent_guardian_name' not in existing_columns:
-            db.session.execute(db.text('ALTER TABLE students ADD COLUMN parent_guardian_name VARCHAR(100)'))
-            print("✅ Added parent_guardian_name column")
-        
-        if 'blood_group' not in existing_columns:
-            db.session.execute(db.text('ALTER TABLE students ADD COLUMN blood_group VARCHAR(5)'))
-            print("✅ Added blood_group column")
-        
-        db.session.commit()
-    except Exception as e:
-        print(f"Note: Column addition: {e}")
-    
-    # Remove code column from departments if exists
-    try:
-        result = db.session.execute(db.text("PRAGMA table_info(departments)"))
-        existing_columns = [row[1] for row in result.fetchall()]
-        
-        if 'code' in existing_columns:
-            db.session.execute(db.text('ALTER TABLE departments RENAME TO departments_old'))
-            db.session.execute(db.text('''
-                CREATE TABLE departments (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name VARCHAR(100) UNIQUE NOT NULL,
-                    description VARCHAR(200),
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            '''))
-            db.session.execute(db.text('''
-                INSERT INTO departments (id, name, description, created_at)
-                SELECT id, name, description, created_at FROM departments_old
-            '''))
-            db.session.execute(db.text('DROP TABLE departments_old'))
-            db.session.commit()
-            print("✅ Removed code column from departments table")
-    except Exception as e:
-        print(f"Note: Code column removal: {e}")
 
 # ==================== HELPER FUNCTIONS ====================
 
@@ -786,6 +737,101 @@ def student_details(student_id):
     
     student = Student.query.get_or_404(student_id)
     return render_template('student_details.html', student=student)
+
+@app.route('/get_student_full_details/<int:student_id>')
+def get_student_full_details(student_id):
+    role = session.get('role')
+    if role not in ['staff', 'dept_admin', 'dept_admin_viewer']:
+        return jsonify({'success': False, 'error': 'Unauthorized'})
+    
+    student = Student.query.get_or_404(student_id)
+    
+    records = Attendance.query.filter_by(student_id=student_id).order_by(
+        Attendance.date.desc(), 
+        Attendance.period
+    ).all()
+    
+    od_activities = Extracurricular.query.filter(
+        Extracurricular.student_id == student_id,
+        Extracurricular.notes.like('OD_%')
+    ).all()
+    
+    od_info = {}
+    for od in od_activities:
+        activity_name = od.notes.replace('OD_', '')
+        period_found = None
+        
+        if '_period_' in od.notes:
+            try:
+                period_part = od.notes.split('_period_')[1]
+                period_found = int(period_part)
+                activity_name = activity_name.split('_period_')[0]
+            except:
+                pass
+        
+        if period_found:
+            key = f"{od.activity_date}_{period_found}"
+            od_info[key] = {
+                'activity_name': activity_name,
+                'activity_type': od.activity_type.name if od.activity_type else 'General'
+            }
+    
+    daily_attendance = defaultdict(dict)
+    
+    for record in records:
+        staff = db.session.get(Staff, record.marked_by)
+        record.marked_by_name = staff.name if staff else 'System'
+        
+        od_key = f"{record.date}_{record.period}"
+        record.is_od = od_key in od_info
+        record.od_activity_name = od_info[od_key]['activity_name'] if record.is_od else ''
+        
+        daily_attendance[record.date.strftime('%Y-%m-%d')][record.period] = {
+            'status': record.status,
+            'is_od': record.is_od,
+            'od_activity_name': record.od_activity_name,
+            'marked_by': record.marked_by_name
+        }
+    
+    for date in list(daily_attendance.keys()):
+        for period in range(1, 7):
+            if period not in daily_attendance[date]:
+                daily_attendance[date][period] = {
+                    'status': 'absent',
+                    'is_od': False,
+                    'od_activity_name': '',
+                    'marked_by': 'Not Marked'
+                }
+    
+    total_periods, present_periods, od_periods, absent_periods, percentage = calculate_student_attendance(student_id)
+    total_days = len(daily_attendance)
+    
+    return jsonify({
+        'success': True,
+        'student': {
+            'id': student.id,
+            'name': student.name,
+            'register_number': student.register_number,
+            'gender': student.gender,
+            'year': student.year,
+            'section': student.section,
+            'batch': student.batch,
+            'dob': student.dob,
+            'umis': student.umis,
+            'mobile_student': student.mobile_student,
+            'mobile_parent': student.mobile_parent,
+            'parent_guardian_name': student.parent_guardian_name,
+            'blood_group': student.blood_group
+        },
+        'attendance': {
+            'total_days': total_days,
+            'present': present_periods,
+            'od': od_periods,
+            'absent': absent_periods,
+            'percentage': percentage
+        },
+        'daily_attendance': daily_attendance
+    })
 
 @app.route('/edit_register_number/<int:student_id>', methods=['GET', 'POST'])
 def edit_register_number(student_id):
@@ -2262,140 +2308,7 @@ def delete_student(student_id):
     
     return redirect(url_for('view_class', year=year, section=section))
 
-@app.route('/change_password', methods=['GET', 'POST'])
-def change_password():
-    role = session.get('role')
-    if role not in ['dept_admin', 'dept_admin_viewer']:
-        return redirect(url_for('index'))
-    
-    if request.method == 'POST':
-        current_password = request.form.get('current_password')
-        new_password = request.form.get('new_password')
-        confirm_password = request.form.get('confirm_password')
-        
-        admin = db.session.get(Staff, session.get('staff_id'))
-        
-        if not admin or not admin.check_password(current_password):
-            session['password_message'] = '❌ Current password is incorrect!'
-            return redirect(url_for('change_password'))
-        
-        if new_password != confirm_password:
-            session['password_message'] = '❌ New passwords do not match!'
-            return redirect(url_for('change_password'))
-        
-        if len(new_password) < 6:
-            session['password_message'] = '❌ Password must be at least 6 characters!'
-            return redirect(url_for('change_password'))
-        
-        admin.set_password(new_password)
-        db.session.commit()
-        session.clear()
-        flash('✅ Password changed successfully! Please login with your new password.', 'success')
-        
-        return redirect(url_for('index'))
-    
-    return render_template('change_password.html')
-
-@app.route('/get_student_full_details/<int:student_id>')
-def get_student_full_details(student_id):
-    role = session.get('role')
-    if role not in ['staff', 'dept_admin', 'dept_admin_viewer']:
-        return jsonify({'success': False, 'error': 'Unauthorized'})
-    
-    student = Student.query.get_or_404(student_id)
-    
-    # Get attendance records
-    records = Attendance.query.filter_by(student_id=student_id).order_by(
-        Attendance.date.desc(), 
-        Attendance.period
-    ).all()
-    
-    # Get OD activities
-    od_activities = Extracurricular.query.filter(
-        Extracurricular.student_id == student_id,
-        Extracurricular.notes.like('OD_%')
-    ).all()
-    
-    # Create OD info dictionary
-    od_info = {}
-    for od in od_activities:
-        activity_name = od.notes.replace('OD_', '')
-        period_found = None
-        
-        if '_period_' in od.notes:
-            try:
-                period_part = od.notes.split('_period_')[1]
-                period_found = int(period_part)
-                activity_name = activity_name.split('_period_')[0]
-            except:
-                pass
-        
-        if period_found:
-            key = f"{od.activity_date}_{period_found}"
-            od_info[key] = {
-                'activity_name': activity_name,
-                'activity_type': od.activity_type.name if od.activity_type else 'General'
-            }
-    
-    # Build daily attendance
-    daily_attendance = defaultdict(dict)
-    
-    for record in records:
-        staff = db.session.get(Staff, record.marked_by)
-        record.marked_by_name = staff.name if staff else 'System'
-        
-        od_key = f"{record.date}_{record.period}"
-        record.is_od = od_key in od_info
-        record.od_activity_name = od_info[od_key]['activity_name'] if record.is_od else ''
-        
-        daily_attendance[record.date.strftime('%Y-%m-%d')][record.period] = {
-            'status': record.status,
-            'is_od': record.is_od,
-            'od_activity_name': record.od_activity_name,
-            'marked_by': record.marked_by_name
-        }
-    
-    # Fill missing periods
-    for date in list(daily_attendance.keys()):
-        for period in range(1, 7):
-            if period not in daily_attendance[date]:
-                daily_attendance[date][period] = {
-                    'status': 'absent',
-                    'is_od': False,
-                    'od_activity_name': '',
-                    'marked_by': 'Not Marked'
-                }
-    
-    # Calculate statistics
-    total_periods, present_periods, od_periods, absent_periods, percentage = calculate_student_attendance(student_id)
-    total_days = len(daily_attendance)
-    
-    return jsonify({
-        'success': True,
-        'student': {
-            'id': student.id,
-            'name': student.name,
-            'register_number': student.register_number,
-            'gender': student.gender,
-            'year': student.year,
-            'section': student.section,
-            'batch': student.batch,
-            'dob': student.dob,
-            'umis': student.umis,
-            'mobile_student': student.mobile_student,
-            'mobile_parent': student.mobile_parent,
-            'parent_guardian_name': student.parent_guardian_name,
-            'blood_group': student.blood_group
-        },
-        'attendance': {
-            'total_days': total_days,
-            'present': present_periods,
-            'od': od_periods,
-            'absent': absent_periods,
-            'percentage': percentage
-        },
-        'daily_attendance': daily_attendance
-    })
+# ==================== CLEANUP AND PROMOTION ROUTES ====================
 
 @app.route('/clear_all_attendance', methods=['POST'])
 def clear_all_attendance():
@@ -2417,7 +2330,6 @@ def clear_all_attendance():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
 
-# Promote Students Route
 @app.route('/promote_students', methods=['POST'])
 def promote_students():
     role = session.get('role')
@@ -2454,15 +2366,7 @@ def promote_students():
         
         return jsonify({
             'success': True,
-            'message': f'✅ Promotion Complete!\n\n'
-                      f'📊 Summary:\n'
-                      f'• 3rd Year: {third_year_count} students graduated and removed\n'
-                      f'• 2nd Year → 3rd Year: {second_year_count} students promoted\n'
-                      f'• 1st Year → 2nd Year: {first_year_count} students promoted\n\n'
-                      f'📋 Current Status:\n'
-                      f'• 1st Year: {new_first_year_count} students\n'
-                      f'• 2nd Year: {new_second_year_count} students\n'
-                      f'• 3rd Year: {new_third_year_count} students',
+            'message': f'✅ Promotion Complete!\n\n📊 Summary:\n• 3rd Year: {third_year_count} students graduated and removed\n• 2nd Year → 3rd Year: {second_year_count} students promoted\n• 1st Year → 2nd Year: {first_year_count} students promoted\n\n📋 Current Status:\n• 1st Year: {new_first_year_count} students\n• 2nd Year: {new_second_year_count} students\n• 3rd Year: {new_third_year_count} students',
             'details': {
                 'deleted_third_year': deleted_third_year,
                 'promoted_to_third': second_year_count,
@@ -2475,6 +2379,40 @@ def promote_students():
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/change_password', methods=['GET', 'POST'])
+def change_password():
+    role = session.get('role')
+    if role not in ['dept_admin', 'dept_admin_viewer']:
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+        
+        admin = db.session.get(Staff, session.get('staff_id'))
+        
+        if not admin or not admin.check_password(current_password):
+            session['password_message'] = '❌ Current password is incorrect!'
+            return redirect(url_for('change_password'))
+        
+        if new_password != confirm_password:
+            session['password_message'] = '❌ New passwords do not match!'
+            return redirect(url_for('change_password'))
+        
+        if len(new_password) < 6:
+            session['password_message'] = '❌ Password must be at least 6 characters!'
+            return redirect(url_for('change_password'))
+        
+        admin.set_password(new_password)
+        db.session.commit()
+        session.clear()
+        flash('✅ Password changed successfully! Please login with your new password.', 'success')
+        
+        return redirect(url_for('index'))
+    
+    return render_template('change_password.html')
 
 @app.route('/logout')
 def logout():

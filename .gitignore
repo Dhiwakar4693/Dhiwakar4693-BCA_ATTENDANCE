@@ -1,13 +1,198 @@
-# Create .gitignore file
-echo "__pycache__/" > .gitignore
-echo "*.pyc" >> .gitignore
-echo "*.db" >> .gitignore
-echo "*.sqlite" >> .gitignore
-echo "instance/" >> .gitignore
-echo "uploads/*.xlsx" >> .gitignore
-echo "uploads/*.csv" >> .gitignore
-echo ".env" >> .gitignore
-echo "venv/" >> .gitignore
-echo "env/" >> .gitignore
-echo ".DS_Store" >> .gitignore
-echo "Thumbs.db" >> .gitignore
+# ==================== Environment Variables ====================
+# Database credentials and secrets (NEVER commit these!)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# ==================== Database Files ====================
+# SQLite database files
+*.db
+*.sqlite
+*.sqlite3
+instance/
+*.db-journal
+
+# PostgreSQL local files (if any)
+*.pgdata
+*.pgdump
+
+# ==================== Python ====================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# poetry
+poetry.lock
+
+# ==================== Virtual Environment ====================
+# Virtual environment (can be recreated with requirements.txt)
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+venv*/
+ENV*/
+
+# ==================== IDE / Editor Files ====================
+# VS Code
+.vscode/
+.history/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+.*.swp
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# ==================== Uploads & Media ====================
+# User uploaded files
+uploads/
+uploads/*.xlsx
+uploads/*.xls
+uploads/*.csv
+uploads/*.tmp
+uploads/*.temp
+media/
+
+# ==================== Logs ====================
+# Log files
+*.log
+logs/
+*.log.*
+*.pid
+
+# ==================== Flask ====================
+# Flask instance folder
+instance/
+.webassets-cache
+.flaskenv
+.flask_session/
+
+# ==================== Testing ====================
+/.pytest_cache/
+/.tox/
+/.coverage
+/htmlcov/
+/.mypy_cache/
+/.ruff_cache/
+
+# ==================== OS Generated Files ====================
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.bak
+*.tmp
+
+# Windows
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+*.directory
+
+# ==================== Project Specific ====================
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Backup files
+*.backup
+*.old
+
+# Local development overrides
+*.local.py
+config.local.py
+
+# Migration backups
+*.sql.bak
